@@ -138,6 +138,7 @@ const faceControls = async () => {
         buildFaceBlendShapesDictonary(detections.faceBlendshapes);
 
         jawToggle.checked && jawMusicControl(detections);
+        eyeBrowToggle.checked && eyeBrowControl(detections);
         // eyeBrowToggle.checked && eyeBrowJawControl(detections);
         // blinkToggleControls(detections);
     }
@@ -167,32 +168,38 @@ const jawMusicControl = async (detections) => {
     }
 }
 
-const eyeBrowJawControl = async (detections) => {
-    // BUG Here: The input is spammed. So it never does the "expected" behavior I had in mind. 
-    // Id imagine some solution would involve some type of throttle or mutex? Would need to think about it more.
-    
-    const browDownLeftVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BrowDownLeft]].score * 100;
-    const browDownRightVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BroDownRight]].score * 100;
-    
-    if(browDownLeftVal > 50 && browDownRightVal < 50) {
-        if(audioPlayer.volume > 0) {
-            audioPlayer.volume -= audioPlayer.volume - 0.2;
+let prevLeftBrowIsDown = false;
+let prevRightBrowIsdown = false;
+const eyeBrowControl = async (detections) => {
+    const browDownLeftScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BrowDownLeft]].score * 100;
+    const leftBrowIsDown = 100 - browDownLeftScore < 35;
+    const browDownRightScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BroDownRight]].score * 100;
+    const rightBrowIsDown = 100 - browDownRightScore < 35;
+
+
+    if(prevLeftBrowIsDown !== leftBrowIsDown){
+        prevLeftBrowIsDown = leftBrowIsDown; 
+        if(leftBrowIsDown && !rightBrowIsDown){
+            if(audioPlayer.volume - 0.2 > 0) {
+                audioPlayer.volume -= 0.2;
+            } else {
+                audioPlayer.volume = 0;
+            }
         }
     }
 
-    if (browDownRightVal > 50 && browDownLeftVal < 50) {
-        if (audioPlayer.volume < 1 && !eyebrowLocked) {
-            try {
-                eyebrowLocked = true;
-                audioPlayer.volume += audioPlayer.volume + 0.2;
-                eyebrowLocked = false;
-            } catch (err) {
+    if(prevRightBrowIsdown !== rightBrowIsDown){
+        prevRightBrowIsdown = rightBrowIsDown; 
+        if(rightBrowIsDown && !leftBrowIsDown){
+            if(audioPlayer.volume + 0.2 < 1) {
+                audioPlayer.volume += 0.2;
+            } else {
                 audioPlayer.volume = 1;
-                eyebrowLocked = false;
             }
         }
     }
 }
+
 
 const blinkToggleControls = async (detections) => {
     // BUG Here: The input is spammed. So it never does the "expected" behavior I had in mind. 
