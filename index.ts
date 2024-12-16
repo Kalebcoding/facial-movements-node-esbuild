@@ -122,32 +122,14 @@ const buildFaceBlendShapesDictonary = (faceBlendshapes): void => {
 };
 
 
-/**
- * Logic for playing and stopping the music 
- * API only exposts jaw open, so we have to use that to track closing / open. 
- */
-const faceControls = async () => {
-    let lastVideoTime: Number = -1;
-    let startTimeMs: Number = performance.now();
-    if (video.currentTime != lastVideoTime) {
-        lastVideoTime = video.currentTime;
-        const detections = webcamTracker.detectForVideo(video, startTimeMs);
-
-        buildFaceBlendShapesDictonary(detections.faceBlendshapes);
-
-        jawToggle.checked && jawMusicControl(detections);
-        eyeBrowToggle.checked && eyeBrowControl(detections);
-        // eyeBrowToggle.checked && eyeBrowJawControl(detections);
-        // blinkToggleControls(detections);
-    }
-
-    // We can set the response of this to an object to capture id
-    // Then stop it so we dont spam the browser, but thats a different optimization. 
-    window.requestAnimationFrame(faceControls);
-}
-
 let prevMouthOpen = false;
 let prevMouthClosed = false;
+/**
+ * Jaw music start / stop control
+ * Jaw open should play music
+ * Jaw close should stop music
+ * @param detections 
+ */
 const jawMusicControl = async (detections) => {
     const jawOpenScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.JawOpen]].score * 100;
     const mouthOpen = 100 - jawOpenScore < 70;
@@ -168,6 +150,12 @@ const jawMusicControl = async (detections) => {
 
 let prevLeftBrowIsDown = false;
 let prevRightBrowIsdown = false;
+/**
+ * Eye Brow volume controls. 
+ * Left Brow Down should reduce the audio player volume
+ * Right Brow Down should increase the audio player volume
+ * @param detections 
+ */
 const eyeBrowControl = async (detections) => {
     const browDownLeftScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BrowDownLeft]].score * 100;
     const leftBrowIsDown = 100 - browDownLeftScore < 35;
@@ -198,7 +186,34 @@ const eyeBrowControl = async (detections) => {
     }
 }
 
+/**
+ * Logic for playing and stopping the music 
+ * API only exposts jaw open, so we have to use that to track closing / open. 
+ */
+const faceControls = async () => {
+    let lastVideoTime: Number = -1;
+    let startTimeMs: Number = performance.now();
+    if (video.currentTime != lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        const detections = webcamTracker.detectForVideo(video, startTimeMs);
 
+        buildFaceBlendShapesDictonary(detections.faceBlendshapes);
+
+        jawToggle.checked && jawMusicControl(detections);
+        eyeBrowToggle.checked && eyeBrowControl(detections);
+        // eyeBrowToggle.checked && eyeBrowJawControl(detections);
+        // blinkToggleControls(detections);
+    }
+
+    // We can set the response of this to an object to capture id
+    // Then stop it so we dont spam the browser, but thats a different optimization. 
+    window.requestAnimationFrame(faceControls);
+}
+
+/**
+ * Supported hand gesture landmarker controls
+ * @param detections 
+ */
 const handControls = async (detections) => {
     let lastVideoTime: Number = -1;
     let startTimeMs: Number = performance.now();
@@ -216,7 +231,7 @@ const handControls = async (detections) => {
 
         if ((detections[0] && detections[1]) && (detections.landmarks[0][4].x === detections.landmarks[1][4].x) && (detections.landmarks[0][4].y === detections.landmarks[1][4].y))
         {
-            // console.log("TOUCHING");
+            console.log("TOUCHING");
         }
         // buildFaceBlendShapesDictonary(detections.faceBlendshapes)
     }
@@ -226,20 +241,6 @@ const handControls = async (detections) => {
     window.requestAnimationFrame(handControls);
 }
 
-const handTesting = async (detections) => {
-    let lastVideoTime: Number = -1;
-    let startTimeMs: Number = performance.now();
-    if (video.currentTime != lastVideoTime) {
-        lastVideoTime = video.currentTime;
-        const detections = handTracker.detectForVideo(video, startTimeMs);
-        
-        // console.log(`detections`, detections);
-    }
-
-    // We can set the response of this to an object to capture id
-    // Then stop it so we dont spam the browser, but thats a different optimization. 
-    window.requestAnimationFrame(handTesting);
-}
 
 /**
  * Request media permissions and push the webcam to browser
@@ -248,12 +249,12 @@ const setWebcamStream = async () => {
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
         video.srcObject = stream;
         video.addEventListener("loadeddata", faceControls);
-        // video.addEventListener("loadeddata", handControls)
-        // video.addEventListener("loadeddata", handTesting);
+        video.addEventListener("loadeddata", handControls)
     });
 }
 
 
+// Function Calls
 setFaceLandmarker();
 setHandLandmarker();
 setAudioSource('./OhHoney.mp3', true);
