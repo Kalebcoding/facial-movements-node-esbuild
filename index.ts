@@ -95,6 +95,17 @@ const createBlendShapesDictonary = (jsonArray: BlendShapesCategories[]): void =>
     }
 }
 
+/**
+ * Used to detect how close two numbers are and if they are within the given tolerance range
+ * @param num1 First number
+ * @param num2 Second Number
+ * @param tolerance Amount of variation to be considered close enough
+ * @returns 
+ */
+const numbersAreClose = (num1: number, num2: number, tolerance: number) => {
+    return Math.abs(num1 - num2) < tolerance;
+}
+
 
 /**
  * I dont think im deadset on this being the best way to go about this. But I wanted something a bit easier to interact with. 
@@ -127,7 +138,7 @@ const faceControls = async () => {
         buildFaceBlendShapesDictonary(detections.faceBlendshapes);
 
         jawToggle.checked && jawMusicControl(detections);
-        eyeBrowToggle.checked && eyeBrowJawControl(detections);
+        // eyeBrowToggle.checked && eyeBrowJawControl(detections);
         // blinkToggleControls(detections);
     }
 
@@ -136,13 +147,22 @@ const faceControls = async () => {
     window.requestAnimationFrame(faceControls);
 }
 
+let prevMouthOpen = false;
+let prevMouthClosed = false;
 const jawMusicControl = async (detections) => {
-    const jawOpenVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.JawOpen]].score * 100;
-    if (jawOpenVal > 50 && audioPlayer.paused) {
+    const jawOpenScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.JawOpen]].score * 100;
+    const mouthOpen = 100 - jawOpenScore < 70;
+    const mouthClosed = 100 - jawOpenScore > 95; 
+
+    if(mouthOpen && mouthOpen !== prevMouthOpen) {
+        prevMouthOpen = mouthOpen;
+        prevMouthClosed = false;
         audioPlayer.play();
     }
 
-    if (jawOpenVal < 50 && !audioPlayer.paused) {
+    if(mouthClosed && mouthClosed !== prevMouthClosed) {
+        prevMouthClosed = mouthClosed;
+        prevMouthOpen = false;
         audioPlayer.pause();
     }
 }
@@ -194,10 +214,6 @@ const blinkToggleControls = async (detections) => {
     }
 }
 
-const numbersAreClose = (num1: number, num2: number, tolerance: number) => {
-    return Math.abs(num1 - num2) < tolerance;
-}
-
 const handControls = async (detections) => {
     let lastVideoTime: Number = -1;
     let startTimeMs: Number = performance.now();
@@ -210,12 +226,12 @@ const handControls = async (detections) => {
             const leftX = detections.landmarks[0][4].x * 100;
             const rightX = detections.landmarks[1][4].x * 100;
             const tolerance = 0.5;
-            console.log(`number are close:`, numbersAreClose(leftX, rightX, tolerance))
+            // console.log(`number are close:`, numbersAreClose(leftX, rightX, tolerance))
         }
 
         if ((detections[0] && detections[1]) && (detections.landmarks[0][4].x === detections.landmarks[1][4].x) && (detections.landmarks[0][4].y === detections.landmarks[1][4].y))
         {
-            console.log("TOUCHING");
+            // console.log("TOUCHING");
         }
         // buildFaceBlendShapesDictonary(detections.faceBlendshapes)
     }
@@ -232,7 +248,7 @@ const handTesting = async (detections) => {
         lastVideoTime = video.currentTime;
         const detections = handTracker.detectForVideo(video, startTimeMs);
         
-        console.log(`detections`, detections);
+        // console.log(`detections`, detections);
     }
 
     // We can set the response of this to an object to capture id
@@ -248,7 +264,7 @@ const setWebcamStream = async () => {
         video.srcObject = stream;
         video.addEventListener("loadeddata", faceControls);
         // video.addEventListener("loadeddata", handControls)
-        video.addEventListener("loadeddata", handTesting);
+        // video.addEventListener("loadeddata", handTesting);
     });
 }
 
