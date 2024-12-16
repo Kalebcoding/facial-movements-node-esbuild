@@ -25,8 +25,6 @@ let blendShapesDictonary: Record<number, string> = {};
 // Supported Movements
 enum SupportedMovements {
     JawOpen = 'jawOpen',
-    EyeBlinkLeft = 'eyeBlinkLeft',
-    EyeBlinkRight = 'eyeBlinkRight',
     BrowDownLeft = 'browDownLeft',
     BroDownRight = 'browDownRight'
 }
