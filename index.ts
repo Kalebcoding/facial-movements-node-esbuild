@@ -1,5 +1,5 @@
 const taskVision = require('@mediapipe/tasks-vision')
-const { FaceLandmarker, FilesetResolver, DrawingUtils } = taskVision;
+const { HandLandmarker, FaceLandmarker, FilesetResolver, DrawingUtils } = taskVision;
 
 
 // Setting up main variables i will use later
@@ -7,25 +7,47 @@ const audioPlayer: HTMLAudioElement = document.getElementById('face-audio') as H
 const video: HTMLVideoElement = document.getElementById('webcam') as HTMLVideoElement;
 const jawToggle: HTMLInputElement = document.getElementById('jaw-toggle') as HTMLInputElement;
 const eyeBrowToggle: HTMLInputElement = document.getElementById('eye-brow-toggle') as HTMLInputElement;
-// const blinkToggle: HTMLInputElement = document.getElementById('blink-toggle') as HTMLInputElement;
+const blinkToggle: HTMLInputElement = document.getElementById('blink-toggle') as HTMLInputElement;
 
 // Would of used webcamTracker: FaceLandmarker here but its not liking it. Like just becaue I dont have proper bundler / configs setup. 
 let webcamTracker = null;
+let handTracker = null; 
 
-// Will use the below to map out the categories so I dont have to use magic strings
-interface BlendShapesCategories {
+// Type to match the structure of the blendshape categories 
+type BlendShapesCategories = {
     index: number;
     score: number;
     categoryName: string;
     displayName: string;
 }
-let blendShapesDictonary: Record<number, string> = {};
+let blendShapesDictionary: Record<string, number> = {};
+
+
+// Type to match the structure of the handedness 
+type MediaPipeHandednessType = {
+    score: number;
+    index: number,
+    categoryName: string,
+    displayName: string,
+}
+type NestedMediaPipeHandednessType = MediaPipeHandednessType[][];
+type HandenessType = {
+    [key: string]: number;
+}
+let newHandednessJson: HandenessType = {};
+
+// Maping of hand coordinates (some)
+enum HandCoordinatesEnum {
+    THUMB_TIP = 4,
+    INDEX_FINGER_TIP = 8,
+    MIDDLE_FINGER_TIP = 12,
+    RING_FINGER_TIP = 16,
+}
+
 
 // Supported Movements
 enum SupportedMovements {
     JawOpen = 'jawOpen',
-    EyeBlinkleft = 'eyeBlinkLeft',
-    EyeBlinkRight = 'eyeBlinkRight',
     BrowDownLeft = 'browDownLeft',
     BroDownRight = 'browDownRight'
 }
@@ -53,6 +75,21 @@ const setFaceLandmarker = async (): Promise<void> => {
     })
 };
 
+const setHandLandmarker = async (): Promise<void> => {
+    const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+    );
+
+    handTracker = await HandLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numHands: 2
+      });
+}
+
 
 /**
  * Gets audio source with some parameters.
@@ -72,17 +109,43 @@ const setAudioSource = (path: string, showControls: boolean): void => {
  * @param jsonArray - This should map out the categories and their indexes 
  * @returns 
  */
-const createBlendShapesDictonary = (jsonArray: BlendShapesCategories[]): void => {
+const createBlendShapesDictionary = (jsonArray: BlendShapesCategories[]): Record<string, number> => {
+    let dictionary: Record<string, number> = {};
 
     for (const item of jsonArray) {
-        blendShapesDictonary[item.categoryName] = item.index;
+        dictionary[item.categoryName] = item.index;
     }
+
+    return dictionary;
+}
+
+const createHandednessDictonary = (jsonArray: NestedMediaPipeHandednessType): HandenessType => {
+    let newJsonArray: HandenessType = {};
+
+    jsonArray.map((handArray: MediaPipeHandednessType[]) => {
+        handArray.map((item: MediaPipeHandednessType) => {
+            newJsonArray[item.categoryName] = item.index
+        })
+    })
+
+    return newJsonArray;
+}
+    
+
+/**
+ * Used to detect how close two numbers are and if they are within the given tolerance range
+ * @param num1 First number
+ * @param num2 Second Number
+ * @param tolerance Amount of variation to be considered close enough
+ * @returns 
+ */
+const numbersAreClose = (num1: number, num2: number, tolerance: number) => {
+    return Math.abs(num1 - num2) < tolerance;
 }
 
 
 /**
- * I dont think im deadset on this being the best way to go about this. But I wanted something a bit easier to interact with. 
- * Goal is take in the faceBlendShapes array from the detections call and generate a dictonary of their keys if its missing. 
+ * Create a dictonary to use that has all the category names as the key and the index they are as the value
  * @param faceBlendshapes 
  * @returns 
  */
@@ -91,11 +154,89 @@ const buildFaceBlendShapesDictonary = (faceBlendshapes): void => {
         return;
     }
 
-    if (Object.keys(blendShapesDictonary).length === 0) {
-        createBlendShapesDictonary(faceBlendshapes[0].categories);
+    if (Object.keys(blendShapesDictionary).length === 0) {
+        blendShapesDictionary = createBlendShapesDictionary(faceBlendshapes[0].categories);
     }
 };
 
+/**
+ * Create a dictonary to use that has all the category names as the key and the index they are as the value
+ * @param faceBlendshapes 
+ * @returns 
+ */
+const buildHandednessDictonary = (handedness: NestedMediaPipeHandednessType): void => {
+    // TODO: Fix this logic. It is going to rebuild this dictonary EVERY time it detects hands. Thats bad. 
+    // It needs more complex logic than the categories one did, or it needs a better data structure
+    // This is because the array can be length of 1 but that could change from Left to Right
+    // Rebuilding everytime as a workaround for now.
+
+    newHandednessJson = createHandednessDictonary(handedness);
+};
+
+
+let prevMouthOpen = false;
+let prevMouthClosed = false;
+/**
+ * Jaw music start / stop control
+ * Jaw open should play music
+ * Jaw close should stop music
+ * @param detections 
+ */
+const jawMusicControl = async (detections) => {
+    const jawOpenScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.JawOpen]].score * 100;
+    const mouthOpen = 100 - jawOpenScore < 70;
+    const mouthClosed = 100 - jawOpenScore > 95; 
+
+    if(mouthOpen && mouthOpen !== prevMouthOpen) {
+        prevMouthOpen = mouthOpen;
+        prevMouthClosed = false;
+        audioPlayer.play();
+    }
+
+    if(mouthClosed && mouthClosed !== prevMouthClosed) {
+        prevMouthClosed = mouthClosed;
+        prevMouthOpen = false;
+        audioPlayer.pause();
+    }
+}
+
+let prevLeftBrowIsDown = false;
+let prevRightBrowIsdown = false;
+/**
+ * Eye Brow volume controls. 
+ * Left Brow Down should reduce the audio player volume
+ * Right Brow Down should increase the audio player volume
+ * @param detections 
+ */
+const eyeBrowControl = async (detections) => {
+    const browDownLeftScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.BrowDownLeft]].score * 100;
+    const leftBrowIsDown = 100 - browDownLeftScore < 35;
+    const browDownRightScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.BroDownRight]].score * 100;
+    const rightBrowIsDown = 100 - browDownRightScore < 35;
+
+
+    if(prevLeftBrowIsDown !== leftBrowIsDown){
+        prevLeftBrowIsDown = leftBrowIsDown; 
+        if(leftBrowIsDown && !rightBrowIsDown){
+            if(audioPlayer.volume - 0.2 > 0) {
+                audioPlayer.volume -= 0.2;
+            } else {
+                audioPlayer.volume = 0;
+            }
+        }
+    }
+
+    if(prevRightBrowIsdown !== rightBrowIsDown){
+        prevRightBrowIsdown = rightBrowIsDown; 
+        if(rightBrowIsDown && !leftBrowIsDown){
+            if(audioPlayer.volume + 0.2 < 1) {
+                audioPlayer.volume += 0.2;
+            } else {
+                audioPlayer.volume = 1;
+            }
+        }
+    }
+}
 
 /**
  * Logic for playing and stopping the music 
@@ -111,8 +252,7 @@ const faceControls = async () => {
         buildFaceBlendShapesDictonary(detections.faceBlendshapes);
 
         jawToggle.checked && jawMusicControl(detections);
-        eyeBrowToggle.checked && eyeBrowJawControl(detections);
-        // blinkToggle.checked && blinkMusicControl(detections);
+        eyeBrowToggle.checked && eyeBrowControl(detections);
     }
 
     // We can set the response of this to an object to capture id
@@ -120,45 +260,56 @@ const faceControls = async () => {
     window.requestAnimationFrame(faceControls);
 }
 
-const jawMusicControl = async (detections) => {
-    const jawOpenVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.JawOpen]].score * 100;
-    if (jawOpenVal > 50 && audioPlayer.paused) {
-        audioPlayer.play();
+
+const pinchControls = async (detections) => {
+    if (detections.landmarks.length !== 2) {
+        return;
     }
 
-    if (jawOpenVal < 50 && !audioPlayer.paused) {
-        audioPlayer.pause();
+    const rightHand = detections.landmarks[newHandednessJson["Right"]];
+    const leftHand = detections.landmarks[newHandednessJson["Left"]];
+
+    if (!rightHand || rightHand.length !== 21 || !leftHand || leftHand.length !== 21) {
+        return;
+    }
+
+    const rightHandThumbTip = rightHand[HandCoordinatesEnum.THUMB_TIP];
+    const rightHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+    const leftHandThumbTip = leftHand[HandCoordinatesEnum.THUMB_TIP];
+    const leftHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+
+    if (numbersAreClose(rightHandThumbTip.x * 100, rightHandIndexTip.x * 100, 1)) {
+        console.log(`touching`);
     }
 }
 
-const eyeBrowJawControl = async (detections) => {
-    // BUG Here: The input is spammed. So it never does the "expected" behavior I had in mind. 
-    // Id imagine some solution would involve some type of throttle or mutex? Would need to think about it more.
-    
-    const browDownLeftVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BrowDownLeft]].score * 100;
-    const browDownRightVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BroDownRight]].score * 100;
-    
-    if(browDownLeftVal > 50 && browDownRightVal < 50) {
-        if(audioPlayer.volume > 0) {
-            audioPlayer.volume -= audioPlayer.volume - 0.2;
-        }
+/**
+ * Supported hand gesture landmarker controls
+ * @param detections 
+ */
+const handControls = async (detections) => {
+    let lastVideoTime: Number = -1;
+    let startTimeMs: Number = performance.now();
+    if (video.currentTime != lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        const detections = handTracker.detectForVideo(video, startTimeMs);
+
+        // EDIT / Note: Because the index value from detections doesnt change for left if its the only one in view. Gonna just get it working with both hands in view for now.
+        // Determine if Left, Right, Both, or None are visible through handedness
+        // Set indexes of each to a variable
+        buildHandednessDictonary(detections.handedness)
+        // Create a Dictonary of all coordinates -- ENUM HandCoordinatesEnum
+
+        // Compare touch for interactions (x, y, z)
+        pinchControls(detections); 
+
     }
 
-    if (browDownRightVal > 50 && browDownLeftVal < 50) {
-        if (audioPlayer.volume < 1 && !eyebrowLocked) {
-            try {
-                eyebrowLocked = true;
-                console.log(audioPlayer.volume)
-                console.log(audioPlayer.volume + 0.2)
-                audioPlayer.volume += audioPlayer.volume + 0.2;
-                eyebrowLocked = false;
-            } catch (err) {
-                audioPlayer.volume = 1;
-                eyebrowLocked = false;
-            }
-        }
-    }
+    // We can set the response of this to an object to capture id
+    // Then stop it so we dont spam the browser, but thats a different optimization. 
+    window.requestAnimationFrame(handControls);
 }
+
 
 /**
  * Request media permissions and push the webcam to browser
@@ -167,10 +318,13 @@ const setWebcamStream = async () => {
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
         video.srcObject = stream;
         video.addEventListener("loadeddata", faceControls);
+        // video.addEventListener("loadeddata", handControls);
     });
 }
 
 
+// Function Calls
 setFaceLandmarker();
+setHandLandmarker();
 setAudioSource('./OhHoney.mp3', true);
 setWebcamStream();
