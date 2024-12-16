@@ -13,14 +13,37 @@ const blinkToggle: HTMLInputElement = document.getElementById('blink-toggle') as
 let webcamTracker = null;
 let handTracker = null; 
 
-// Will use the below to map out the categories so I dont have to use magic strings
-interface BlendShapesCategories {
+// Type to match the structure of the blendshape categories 
+type BlendShapesCategories = {
     index: number;
     score: number;
     categoryName: string;
     displayName: string;
 }
 let blendShapesDictionary: Record<string, number> = {};
+
+
+// Type to match the structure of the handedness 
+type MediaPipeHandednessType = {
+    score: number;
+    index: number,
+    categoryName: string,
+    displayName: string,
+}
+type NestedMediaPipeHandednessType = MediaPipeHandednessType[][];
+type HandenessType = {
+    [key: string]: number;
+}
+let newHandednessJson: HandenessType = {};
+
+// Maping of hand coordinates (some)
+enum HandCoordinatesEnum {
+    THUMB_TIP = 4,
+    INDEX_FINGER_TIP = 8,
+    MIDDLE_FINGER_TIP = 12,
+    RING_FINGER_TIP = 16,
+}
+
 
 // Supported Movements
 enum SupportedMovements {
@@ -96,6 +119,19 @@ const createBlendShapesDictionary = (jsonArray: BlendShapesCategories[]): Record
     return dictionary;
 }
 
+const createHandednessDictonary = (jsonArray: NestedMediaPipeHandednessType): HandenessType => {
+    let newJsonArray: HandenessType = {};
+
+    jsonArray.map((handArray: MediaPipeHandednessType[]) => {
+        handArray.map((item: MediaPipeHandednessType) => {
+            newJsonArray[item.categoryName] = item.index
+        })
+    })
+
+    return newJsonArray;
+}
+    
+
 /**
  * Used to detect how close two numbers are and if they are within the given tolerance range
  * @param num1 First number
@@ -109,8 +145,7 @@ const numbersAreClose = (num1: number, num2: number, tolerance: number) => {
 
 
 /**
- * I dont think im deadset on this being the best way to go about this. But I wanted something a bit easier to interact with. 
- * Goal is take in the faceBlendShapes array from the detections call and generate a dictonary of their keys if its missing. 
+ * Create a dictonary to use that has all the category names as the key and the index they are as the value
  * @param faceBlendshapes 
  * @returns 
  */
@@ -122,6 +157,20 @@ const buildFaceBlendShapesDictonary = (faceBlendshapes): void => {
     if (Object.keys(blendShapesDictionary).length === 0) {
         blendShapesDictionary = createBlendShapesDictionary(faceBlendshapes[0].categories);
     }
+};
+
+/**
+ * Create a dictonary to use that has all the category names as the key and the index they are as the value
+ * @param faceBlendshapes 
+ * @returns 
+ */
+const buildHandednessDictonary = (handedness: NestedMediaPipeHandednessType): void => {
+    // TODO: Fix this logic. It is going to rebuild this dictonary EVERY time it detects hands. Thats bad. 
+    // It needs more complex logic than the categories one did, or it needs a better data structure
+    // This is because the array can be length of 1 but that could change from Left to Right
+    // Rebuilding everytime as a workaround for now.
+
+    newHandednessJson = createHandednessDictonary(handedness);
 };
 
 
@@ -211,6 +260,29 @@ const faceControls = async () => {
     window.requestAnimationFrame(faceControls);
 }
 
+
+const pinchControls = async (detections) => {
+    if (detections.landmarks.length !== 2) {
+        return;
+    }
+
+    const rightHand = detections.landmarks[newHandednessJson["Right"]];
+    const leftHand = detections.landmarks[newHandednessJson["Left"]];
+
+    if (!rightHand || rightHand.length !== 21 || !leftHand || leftHand.length !== 21) {
+        return;
+    }
+
+    const rightHandThumbTip = rightHand[HandCoordinatesEnum.THUMB_TIP];
+    const rightHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+    const leftHandThumbTip = leftHand[HandCoordinatesEnum.THUMB_TIP];
+    const leftHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+
+    if (numbersAreClose(rightHandThumbTip.x * 100, rightHandIndexTip.x * 100, 1)) {
+        console.log(`touching`);
+    }
+}
+
 /**
  * Supported hand gesture landmarker controls
  * @param detections 
@@ -222,10 +294,15 @@ const handControls = async (detections) => {
         lastVideoTime = video.currentTime;
         const detections = handTracker.detectForVideo(video, startTimeMs);
 
+        // EDIT / Note: Because the index value from detections doesnt change for left if its the only one in view. Gonna just get it working with both hands in view for now.
         // Determine if Left, Right, Both, or None are visible through handedness
         // Set indexes of each to a variable
-        // Create a Dictonary of all coordinates 
+        buildHandednessDictonary(detections.handedness)
+        // Create a Dictonary of all coordinates -- ENUM HandCoordinatesEnum
+
         // Compare touch for interactions (x, y, z)
+        pinchControls(detections); 
+
     }
 
     // We can set the response of this to an object to capture id
@@ -241,7 +318,7 @@ const setWebcamStream = async () => {
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
         video.srcObject = stream;
         video.addEventListener("loadeddata", faceControls);
-        video.addEventListener("loadeddata", handControls);
+        // video.addEventListener("loadeddata", handControls);
     });
 }
 
