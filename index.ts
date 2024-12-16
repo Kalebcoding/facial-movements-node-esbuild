@@ -1,5 +1,5 @@
 const taskVision = require('@mediapipe/tasks-vision')
-const { FaceLandmarker, FilesetResolver, DrawingUtils } = taskVision;
+const { HandLandmarker, FaceLandmarker, FilesetResolver, DrawingUtils } = taskVision;
 
 
 // Setting up main variables i will use later
@@ -7,10 +7,11 @@ const audioPlayer: HTMLAudioElement = document.getElementById('face-audio') as H
 const video: HTMLVideoElement = document.getElementById('webcam') as HTMLVideoElement;
 const jawToggle: HTMLInputElement = document.getElementById('jaw-toggle') as HTMLInputElement;
 const eyeBrowToggle: HTMLInputElement = document.getElementById('eye-brow-toggle') as HTMLInputElement;
-// const blinkToggle: HTMLInputElement = document.getElementById('blink-toggle') as HTMLInputElement;
+const blinkToggle: HTMLInputElement = document.getElementById('blink-toggle') as HTMLInputElement;
 
 // Would of used webcamTracker: FaceLandmarker here but its not liking it. Like just becaue I dont have proper bundler / configs setup. 
 let webcamTracker = null;
+let handTracker = null; 
 
 // Will use the below to map out the categories so I dont have to use magic strings
 interface BlendShapesCategories {
@@ -24,7 +25,7 @@ let blendShapesDictonary: Record<number, string> = {};
 // Supported Movements
 enum SupportedMovements {
     JawOpen = 'jawOpen',
-    EyeBlinkleft = 'eyeBlinkLeft',
+    EyeBlinkLeft = 'eyeBlinkLeft',
     EyeBlinkRight = 'eyeBlinkRight',
     BrowDownLeft = 'browDownLeft',
     BroDownRight = 'browDownRight'
@@ -52,6 +53,21 @@ const setFaceLandmarker = async (): Promise<void> => {
         numFaces: 1,
     })
 };
+
+const setHandLandmarker = async (): Promise<void> => {
+    const vision = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+    );
+
+    handTracker = await HandLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numHands: 2
+      });
+}
 
 
 /**
@@ -112,7 +128,7 @@ const faceControls = async () => {
 
         jawToggle.checked && jawMusicControl(detections);
         eyeBrowToggle.checked && eyeBrowJawControl(detections);
-        // blinkToggle.checked && blinkMusicControl(detections);
+        // blinkToggleControls(detections);
     }
 
     // We can set the response of this to an object to capture id
@@ -148,8 +164,6 @@ const eyeBrowJawControl = async (detections) => {
         if (audioPlayer.volume < 1 && !eyebrowLocked) {
             try {
                 eyebrowLocked = true;
-                console.log(audioPlayer.volume)
-                console.log(audioPlayer.volume + 0.2)
                 audioPlayer.volume += audioPlayer.volume + 0.2;
                 eyebrowLocked = false;
             } catch (err) {
@@ -160,6 +174,72 @@ const eyeBrowJawControl = async (detections) => {
     }
 }
 
+const blinkToggleControls = async (detections) => {
+    // BUG Here: The input is spammed. So it never does the "expected" behavior I had in mind. 
+    // Id imagine some solution would involve some type of throttle or mutex? Would need to think about it more.
+    
+    const eyeBlinkRightVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.EyeBlinkRight]].score * 100;
+    const eyeBlinkLeftVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.EyeBlinkLeft]].score * 100;
+    
+    if(eyeBlinkLeftVal > 50 && eyeBlinkRightVal > 50) {
+        blinkToggle.checked = !blinkToggle.checked;
+    }
+
+    if(eyeBlinkLeftVal > 50 && eyeBlinkRightVal < 50) {
+        jawToggle.checked = !jawToggle.checked
+    }
+
+    if(eyeBlinkLeftVal < 50 && eyeBlinkRightVal > 50) {
+        eyeBrowToggle.checked = !eyeBrowToggle.checked
+    }
+}
+
+const numbersAreClose = (num1: number, num2: number, tolerance: number) => {
+    return Math.abs(num1 - num2) < tolerance;
+}
+
+const handControls = async (detections) => {
+    let lastVideoTime: Number = -1;
+    let startTimeMs: Number = performance.now();
+    if (video.currentTime != lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        const detections = handTracker.detectForVideo(video, startTimeMs);
+
+        // 0 is left, 1 is right
+        if(detections && detections.landmarks[0] && detections.landmarks[1]){
+            const leftX = detections.landmarks[0][4].x * 100;
+            const rightX = detections.landmarks[1][4].x * 100;
+            const tolerance = 0.5;
+            console.log(`number are close:`, numbersAreClose(leftX, rightX, tolerance))
+        }
+
+        if ((detections[0] && detections[1]) && (detections.landmarks[0][4].x === detections.landmarks[1][4].x) && (detections.landmarks[0][4].y === detections.landmarks[1][4].y))
+        {
+            console.log("TOUCHING");
+        }
+        // buildFaceBlendShapesDictonary(detections.faceBlendshapes)
+    }
+
+    // We can set the response of this to an object to capture id
+    // Then stop it so we dont spam the browser, but thats a different optimization. 
+    window.requestAnimationFrame(handControls);
+}
+
+const handTesting = async (detections) => {
+    let lastVideoTime: Number = -1;
+    let startTimeMs: Number = performance.now();
+    if (video.currentTime != lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        const detections = handTracker.detectForVideo(video, startTimeMs);
+        
+        console.log(`detections`, detections);
+    }
+
+    // We can set the response of this to an object to capture id
+    // Then stop it so we dont spam the browser, but thats a different optimization. 
+    window.requestAnimationFrame(handTesting);
+}
+
 /**
  * Request media permissions and push the webcam to browser
  */
@@ -167,10 +247,13 @@ const setWebcamStream = async () => {
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
         video.srcObject = stream;
         video.addEventListener("loadeddata", faceControls);
+        // video.addEventListener("loadeddata", handControls)
+        video.addEventListener("loadeddata", handTesting);
     });
 }
 
 
 setFaceLandmarker();
+setHandLandmarker();
 setAudioSource('./OhHoney.mp3', true);
 setWebcamStream();
