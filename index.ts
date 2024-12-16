@@ -31,10 +31,10 @@ type MediaPipeHandednessType = {
     displayName: string,
 }
 type NestedMediaPipeHandednessType = MediaPipeHandednessType[][];
-type HandenessType = {
-    [key: string]: number;
-}
-let newHandednessJson: HandenessType = {};
+let newHandednessJson: {} = {
+    Left: null,
+    Right: null
+};
 
 // Maping of hand coordinates (some)
 enum HandCoordinatesEnum {
@@ -119,16 +119,22 @@ const createBlendShapesDictionary = (jsonArray: BlendShapesCategories[]): Record
     return dictionary;
 }
 
-const createHandednessDictonary = (jsonArray: NestedMediaPipeHandednessType): HandenessType => {
-    let newJsonArray: HandenessType = {};
-
+const createHandednessDictonary = (jsonArray: NestedMediaPipeHandednessType): {} => {
+    let newJson: {} = {};
     jsonArray.map((handArray: MediaPipeHandednessType[]) => {
         handArray.map((item: MediaPipeHandednessType) => {
-            newJsonArray[item.categoryName] = item.index
+            newJson[item.categoryName] = jsonArray.length === 2 ? item.index : 0;
         })
     })
+    if(!newJson.hasOwnProperty("Right")){
+        newJson["Right"] = null;
+    }
 
-    return newJsonArray;
+    if(!newJson.hasOwnProperty("Left")){
+        newJson["Left"] = null;
+    }
+
+    return newJson;
 }
     
 
@@ -139,10 +145,17 @@ const createHandednessDictonary = (jsonArray: NestedMediaPipeHandednessType): Ha
  * @param tolerance Amount of variation to be considered close enough
  * @returns 
  */
-const numbersAreClose = (num1: number, num2: number, tolerance: number) => {
-    return Math.abs(num1 - num2) < tolerance;
+const coordsAreClose = (num1: number, num2: number, tolerance: number) => {
+    return Math.abs((num1 * 100) - (num2 * 100)) < tolerance;
 }
 
+
+const xyzAreClose = (json1: {x: number, y: number, z: number}, json2: {x: number, y: number, z: number}, tolerance: number) => {
+    const xClose = coordsAreClose(json1.x, json2.x, tolerance); 
+    const yClose = coordsAreClose(json1.y, json2.y, tolerance); 
+    // const zClose = coordsAreClose(json1.z, json2.z, tolerance); 
+    return xClose && yClose;
+}
 
 /**
  * Create a dictonary to use that has all the category names as the key and the index they are as the value
@@ -260,26 +273,54 @@ const faceControls = async () => {
     window.requestAnimationFrame(faceControls);
 }
 
+const updateControlText = (leftHandVisible: boolean, rightHandVisible: boolean) => {
+    const leftHandControlLabel = document.getElementById("left-hand-control-status");
+    if(leftHandVisible) {
+        leftHandControlLabel.textContent = "Enabled";
+    } else {
+        leftHandControlLabel.textContent = "Disabled";
+    }
 
+    const rightHandControlLabel = document.getElementById("right-hand-control-status");
+    if(rightHandVisible) {
+        rightHandControlLabel.textContent = "Enabled";
+    } else {
+        rightHandControlLabel.textContent = "Disabled";
+    }
+}
+
+let prevLeftTouch = false;
+let prevRightTouch = false;
 const pinchControls = async (detections) => {
-    if (detections.landmarks.length !== 2) {
-        return;
+    const leftHandVisible = newHandednessJson["Left"] !== null;
+    const rightHandVisible = newHandednessJson["Right"] !== null;
+
+    updateControlText(leftHandVisible, rightHandVisible);
+    if (leftHandVisible) {
+        const leftHand = detections.landmarks[newHandednessJson["Left"]];
+        const leftHandThumbTip = leftHand[HandCoordinatesEnum.THUMB_TIP]
+        const leftHandIndexTip = leftHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+        const leftTouch = xyzAreClose(leftHandThumbTip, leftHandIndexTip, 2);
+        if(leftTouch != prevLeftTouch) {
+            prevLeftTouch = leftTouch;
+            if(leftTouch) {
+                jawToggle.checked = !jawToggle.checked;
+            }
+        }
     }
 
-    const rightHand = detections.landmarks[newHandednessJson["Right"]];
-    const leftHand = detections.landmarks[newHandednessJson["Left"]];
 
-    if (!rightHand || rightHand.length !== 21 || !leftHand || leftHand.length !== 21) {
-        return;
-    }
-
-    const rightHandThumbTip = rightHand[HandCoordinatesEnum.THUMB_TIP];
-    const rightHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
-    const leftHandThumbTip = leftHand[HandCoordinatesEnum.THUMB_TIP];
-    const leftHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
-
-    if (numbersAreClose(rightHandThumbTip.x * 100, rightHandIndexTip.x * 100, 1)) {
-        console.log(`touching`);
+    if (rightHandVisible) {
+        const rightHand = detections.landmarks[newHandednessJson["Right"]];
+        const rightHandThumbTip = rightHand[HandCoordinatesEnum.THUMB_TIP];
+        const rightHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+        const rightTouch = xyzAreClose(rightHandThumbTip, rightHandIndexTip, 2);
+        if(rightTouch != prevRightTouch) {
+            prevRightTouch = rightTouch;
+            if(rightTouch) {
+                eyeBrowToggle.checked = !eyeBrowToggle.checked;
+            }
+        }
     }
 }
 
@@ -318,7 +359,7 @@ const setWebcamStream = async () => {
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
         video.srcObject = stream;
         video.addEventListener("loadeddata", faceControls);
-        // video.addEventListener("loadeddata", handControls);
+        video.addEventListener("loadeddata", handControls);
     });
 }
 
