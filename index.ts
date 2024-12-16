@@ -20,7 +20,7 @@ interface BlendShapesCategories {
     categoryName: string;
     displayName: string;
 }
-let blendShapesDictonary: Record<number, string> = {};
+let blendShapesDictionary: Record<string, number> = {};
 
 // Supported Movements
 enum SupportedMovements {
@@ -86,11 +86,14 @@ const setAudioSource = (path: string, showControls: boolean): void => {
  * @param jsonArray - This should map out the categories and their indexes 
  * @returns 
  */
-const createBlendShapesDictonary = (jsonArray: BlendShapesCategories[]): void => {
+const createBlendShapesDictionary = (jsonArray: BlendShapesCategories[]): Record<string, number> => {
+    let dictionary: Record<string, number> = {};
 
     for (const item of jsonArray) {
-        blendShapesDictonary[item.categoryName] = item.index;
+        dictionary[item.categoryName] = item.index;
     }
+
+    return dictionary;
 }
 
 /**
@@ -116,8 +119,8 @@ const buildFaceBlendShapesDictonary = (faceBlendshapes): void => {
         return;
     }
 
-    if (Object.keys(blendShapesDictonary).length === 0) {
-        createBlendShapesDictonary(faceBlendshapes[0].categories);
+    if (Object.keys(blendShapesDictionary).length === 0) {
+        blendShapesDictionary = createBlendShapesDictionary(faceBlendshapes[0].categories);
     }
 };
 
@@ -131,7 +134,7 @@ let prevMouthClosed = false;
  * @param detections 
  */
 const jawMusicControl = async (detections) => {
-    const jawOpenScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.JawOpen]].score * 100;
+    const jawOpenScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.JawOpen]].score * 100;
     const mouthOpen = 100 - jawOpenScore < 70;
     const mouthClosed = 100 - jawOpenScore > 95; 
 
@@ -157,9 +160,9 @@ let prevRightBrowIsdown = false;
  * @param detections 
  */
 const eyeBrowControl = async (detections) => {
-    const browDownLeftScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BrowDownLeft]].score * 100;
+    const browDownLeftScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.BrowDownLeft]].score * 100;
     const leftBrowIsDown = 100 - browDownLeftScore < 35;
-    const browDownRightScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BroDownRight]].score * 100;
+    const browDownRightScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.BroDownRight]].score * 100;
     const rightBrowIsDown = 100 - browDownRightScore < 35;
 
 
@@ -201,8 +204,6 @@ const faceControls = async () => {
 
         jawToggle.checked && jawMusicControl(detections);
         eyeBrowToggle.checked && eyeBrowControl(detections);
-        // eyeBrowToggle.checked && eyeBrowJawControl(detections);
-        // blinkToggleControls(detections);
     }
 
     // We can set the response of this to an object to capture id
@@ -221,19 +222,10 @@ const handControls = async (detections) => {
         lastVideoTime = video.currentTime;
         const detections = handTracker.detectForVideo(video, startTimeMs);
 
-        // 0 is left, 1 is right
-        if(detections && detections.landmarks[0] && detections.landmarks[1]){
-            const leftX = detections.landmarks[0][4].x * 100;
-            const rightX = detections.landmarks[1][4].x * 100;
-            const tolerance = 0.5;
-            // console.log(`number are close:`, numbersAreClose(leftX, rightX, tolerance))
-        }
-
-        if ((detections[0] && detections[1]) && (detections.landmarks[0][4].x === detections.landmarks[1][4].x) && (detections.landmarks[0][4].y === detections.landmarks[1][4].y))
-        {
-            console.log("TOUCHING");
-        }
-        // buildFaceBlendShapesDictonary(detections.faceBlendshapes)
+        // Determine if Left, Right, Both, or None are visible through handedness
+        // Set indexes of each to a variable
+        // Create a Dictonary of all coordinates 
+        // Compare touch for interactions (x, y, z)
     }
 
     // We can set the response of this to an object to capture id
@@ -249,7 +241,7 @@ const setWebcamStream = async () => {
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
         video.srcObject = stream;
         video.addEventListener("loadeddata", faceControls);
-        video.addEventListener("loadeddata", handControls)
+        video.addEventListener("loadeddata", handControls);
     });
 }
 
