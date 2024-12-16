@@ -6,7 +6,7 @@ const { FaceLandmarker, FilesetResolver, DrawingUtils } = taskVision;
 const audioPlayer: HTMLAudioElement = document.getElementById('face-audio') as HTMLAudioElement;
 const video: HTMLVideoElement = document.getElementById('webcam') as HTMLVideoElement;
 const jawToggle: HTMLInputElement = document.getElementById('jaw-toggle') as HTMLInputElement;
-// const eyeBrowToggle: HTMLInputElement = document.getElementById('eye-brow-toggle') as HTMLInputElement;
+const eyeBrowToggle: HTMLInputElement = document.getElementById('eye-brow-toggle') as HTMLInputElement;
 // const blinkToggle: HTMLInputElement = document.getElementById('blink-toggle') as HTMLInputElement;
 
 // Would of used webcamTracker: FaceLandmarker here but its not liking it. Like just becaue I dont have proper bundler / configs setup. 
@@ -29,6 +29,10 @@ enum SupportedMovements {
     BrowDownLeft = 'browDownLeft',
     BroDownRight = 'browDownRight'
 }
+
+
+// Dumb workaround for spam
+let eyebrowLocked: boolean = false; 
 
 /**
  * Create the Facelandmarker object for us
@@ -107,7 +111,7 @@ const faceControls = async () => {
         buildFaceBlendShapesDictonary(detections.faceBlendshapes);
 
         jawToggle.checked && jawMusicControl(detections);
-        // eyeBrowToggle.checked && eyeBrowMusicControl(detections);
+        eyeBrowToggle.checked && eyeBrowJawControl(detections);
         // blinkToggle.checked && blinkMusicControl(detections);
     }
 
@@ -127,6 +131,34 @@ const jawMusicControl = async (detections) => {
     }
 }
 
+const eyeBrowJawControl = async (detections) => {
+    // BUG Here: The input is spammed. So it never does the "expected" behavior I had in mind. 
+    // Id imagine some solution would involve some type of throttle or mutex? Would need to think about it more.
+    
+    const browDownLeftVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BrowDownLeft]].score * 100;
+    const browDownRightVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.BroDownRight]].score * 100;
+    
+    if(browDownLeftVal > 50 && browDownRightVal < 50) {
+        if(audioPlayer.volume > 0) {
+            audioPlayer.volume -= audioPlayer.volume - 0.2;
+        }
+    }
+
+    if (browDownRightVal > 50 && browDownLeftVal < 50) {
+        if (audioPlayer.volume < 1 && !eyebrowLocked) {
+            try {
+                eyebrowLocked = true;
+                console.log(audioPlayer.volume)
+                console.log(audioPlayer.volume + 0.2)
+                audioPlayer.volume += audioPlayer.volume + 0.2;
+                eyebrowLocked = false;
+            } catch (err) {
+                audioPlayer.volume = 1;
+                eyebrowLocked = false;
+            }
+        }
+    }
+}
 
 /**
  * Request media permissions and push the webcam to browser
