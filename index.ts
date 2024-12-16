@@ -201,26 +201,6 @@ const eyeBrowControl = async (detections) => {
 }
 
 
-const blinkToggleControls = async (detections) => {
-    // BUG Here: The input is spammed. So it never does the "expected" behavior I had in mind. 
-    // Id imagine some solution would involve some type of throttle or mutex? Would need to think about it more.
-    
-    const eyeBlinkRightVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.EyeBlinkRight]].score * 100;
-    const eyeBlinkLeftVal = detections?.faceBlendshapes[0]?.categories[blendShapesDictonary[SupportedMovements.EyeBlinkLeft]].score * 100;
-    
-    if(eyeBlinkLeftVal > 50 && eyeBlinkRightVal > 50) {
-        blinkToggle.checked = !blinkToggle.checked;
-    }
-
-    if(eyeBlinkLeftVal > 50 && eyeBlinkRightVal < 50) {
-        jawToggle.checked = !jawToggle.checked
-    }
-
-    if(eyeBlinkLeftVal < 50 && eyeBlinkRightVal > 50) {
-        eyeBrowToggle.checked = !eyeBrowToggle.checked
-    }
-}
-
 const handControls = async (detections) => {
     let lastVideoTime: Number = -1;
     let startTimeMs: Number = performance.now();
