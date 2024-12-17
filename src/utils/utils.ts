@@ -14,6 +14,12 @@ type MediaPipeHandednessType = {
 }
 type NestedMediaPipeHandednessType = MediaPipeHandednessType[][];
 
+type JSONCoordinates = {
+    x: number,
+    y: number,
+    z: number
+}
+
 /**
  * I didnt see anything in their documentation about accessing this value easier. I didnt really want to hardcode it 
  * @param jsonArray - This should map out the categories and their indexes 
@@ -70,27 +76,51 @@ const createHandednessJSONObject = (jsonArray: NestedMediaPipeHandednessType): {
  * @param tolerance Amount of variation to be considered close enough
  * @returns 
  */
-const coordsAreClose = (num1: number, num2: number, tolerance: number) => {
-    return Math.abs((num1 * 100) - (num2 * 100)) < tolerance;
+const coordsAreClose = (num1: number, num2: number, tolerance: number, num1Multipler: number = 1, number2Multiplier: number = 1) => {
+    return Math.abs((num1 * num1Multipler) - (num2 * number2Multiplier)) < tolerance;
 }
 
-const xyAreClose = (json1: {x: number, y: number, z: number}, json2: {x: number, y: number, z: number}, tolerance: number) => {
-    const xClose = coordsAreClose(json1.x, json2.x, tolerance); 
-    const yClose = coordsAreClose(json1.y, json2.y, tolerance); 
+const averageJsonValues = (json1: JSONCoordinates, json2: JSONCoordinates): JSONCoordinates => {
+    const averagedJson: JSONCoordinates = {
+        x: -1,
+        y: -1,
+        z: -1,
+    };
+    for (const key in json1) {
+        if(key in json2) {
+            averagedJson[key] = (json1[key] + json2[key]) / 2;
+        }
+    }
+    return averagedJson;
+}
+
+// Used to determine IF landmarker values are touching
+const landmarkersAreClose = (landmarkerJson1: JSONCoordinates, landmarkerJson2: JSONCoordinates, tolerance: number) => {
+    const landmarkerMultipler = 100;
+    const xClose = coordsAreClose(landmarkerJson1.x, landmarkerJson2.x, tolerance, landmarkerMultipler, landmarkerMultipler); 
+    const yClose = coordsAreClose(landmarkerJson1.y, landmarkerJson2.y, tolerance, landmarkerMultipler, landmarkerMultipler); 
     // const zClose = coordsAreClose(json1.z, json2.z, tolerance); 
     return xClose && yClose;
 }
 
-const fingerTipAndDotAreClose = (num1: number, num2: number, tolerance: number) => {
-    return Math.abs((num1) - (num2 * 100)) < tolerance;
-}
-const fingerTipXYAreClose = (json1: {x: number, y: number, z: number}, json2: {x: number, y: number, z: number}, tolerance: number) => {
-    const xClose = fingerTipAndDotAreClose(json1.x, json2.x, tolerance); 
-    const yClose = fingerTipAndDotAreClose(json1.y, json2.y, tolerance); 
+const canvasAndLandMarkClose = (canvasJson: JSONCoordinates, landmarkerJson: JSONCoordinates, canvasMaxX: number, canvasMaxY: number, tolerance: number) => {
+    const canvasXMultipler = 1;
+    const landmarkerXMultipler = canvasMaxX;
+    const canvasYMultipler = 1;
+    const landmarkerYMultipler = canvasMaxY;
+    const xClose = coordsAreClose(canvasJson.x, landmarkerJson.x, tolerance, canvasXMultipler, landmarkerXMultipler); 
+    const yClose = coordsAreClose(canvasJson.y, landmarkerJson.y, tolerance, canvasYMultipler, landmarkerYMultipler); 
     // const zClose = coordsAreClose(json1.z, json2.z, tolerance); 
     return xClose && yClose;
 }
 
+const landMarkerIntersectionAndCanvasPoint = (landmarkerJson1: JSONCoordinates, landmarkerJson2: JSONCoordinates, canvasJson: JSONCoordinates, canvasMaxX: number, canvasMaxY: number, landMarkertolerance: number, canvasTolerance: number) => {
+    const landmarkersClose = landmarkersAreClose(landmarkerJson1, landmarkerJson2, landMarkertolerance);
+    if(landmarkersClose){
+        const averageLandmarkerJson = averageJsonValues(landmarkerJson1, landmarkerJson2);
+        return canvasAndLandMarkClose(canvasJson, averageLandmarkerJson, canvasMaxX, canvasMaxY, canvasTolerance);
+    }
+}
 
 /**
  * Create a dictonary to use that has all the category names as the key and the index they are as the value
@@ -144,6 +174,16 @@ const getRightHandControlLabel = (): HTMLSpanElement => {
     return rightHandControlLabel;
 }
 
+const getLeftHandPinchLabel = (): HTMLSpanElement => {
+    const leftHandPinchLabel = document.getElementById("left-hand-pinch-status") as HTMLSpanElement;
+    return leftHandPinchLabel;
+}
+
+const getRightHandPinchLabel = (): HTMLSpanElement => {
+    const rightHandPinchLabel = document.getElementById("right-hand-pinch-status") as HTMLSpanElement;
+    return rightHandPinchLabel;
+}
+
 const getJawToggle = (): HTMLInputElement => {
     const jawToggle: HTMLInputElement = document.getElementById('jaw-toggle') as HTMLInputElement;
     return jawToggle;
@@ -194,14 +234,17 @@ const setWebcamStream = async (faceEventManager, handEventManager) => {
 module.exports = {
     createBlendShapesDictionary,
     createHandednessJSONObject,
-    xyAreClose,
-    fingerTipXYAreClose,
+    landmarkersAreClose,
+    canvasAndLandMarkClose,
+    landMarkerIntersectionAndCanvasPoint,
     buildFaceBlendShapesDictonary,
     buildHandednessDictonary,
     getAudioPlayer,
     getVideoPlayer,
     getLeftHandControlLabel,
     getRightHandControlLabel,
+    getLeftHandPinchLabel,
+    getRightHandPinchLabel,
     getJawToggle,
     getEyeBrowToggle,
     getDrawOnCanvasButton,

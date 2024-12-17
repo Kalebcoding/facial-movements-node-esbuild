@@ -10,6 +10,8 @@ class HandController {
     private drawingUtil;
     private prevLeftTouch = false;
     private prevRightTouch = false;
+    private prevLeftPointPinch = false;
+    private prevRightPointPinch = false;
     private leftHandString = "Left";
     private rightHandString = "Right";
 
@@ -44,11 +46,11 @@ class HandController {
         let leftDotCords;
         const cameraMirroed = true;
         if(cameraMirroed){
-            rightDotCords = { x: this.drawingUtil.topLeftDotX / (this.drawingUtil.maxX / 100) , y: this.drawingUtil.topLeftDotY / (this.drawingUtil.maxY / 100), z: 0 }
-            leftDotCords = { x: this.drawingUtil.topRightDotX / (this.drawingUtil.maxX / 100), y: this.drawingUtil.topRightDotY / (this.drawingUtil.maxY / 100), z: 0 }
+            rightDotCords = { x: this.drawingUtil.topLeftDotX, y: this.drawingUtil.topLeftDotY, z: 0 }
+            leftDotCords = { x: this.drawingUtil.topRightDotX, y: this.drawingUtil.topRightDotY, z: 0 }
         } else {
-            leftDotCords = { x: this.drawingUtil.topLeftDotX / (this.drawingUtil.maxX / 100) , y: this.drawingUtil.topLeftDotY / (this.drawingUtil.maxY / 100), z: 0 }
-            rightDotCords = { x: this.drawingUtil.topRightDotX / (this.drawingUtil.maxX / 100), y: this.drawingUtil.topRightDotY / (this.drawingUtil.maxY / 100), z: 0 }
+            leftDotCords = { x: this.drawingUtil.topLeftDotX, y: this.drawingUtil.topLeftDotY, z: 0 }
+            rightDotCords = { x: this.drawingUtil.topRightDotX, y: this.drawingUtil.topRightDotY, z: 0 }
         }
         const jawToggle = this.utils.getJawToggle();
         const eyeBrowToggle = this.utils.getEyeBrowToggle();
@@ -64,8 +66,8 @@ class HandController {
         if (leftHandVisible) {
             const leftHand = detections.landmarks[newHandednessJson[this.leftHandString]];
             const leftHandIndexTip = leftHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
-            const leftTouch = this.utils.fingerTipXYAreClose(leftDotCords, leftHandIndexTip, 5);
-            if(leftTouch != this.prevLeftTouch) {
+            const leftTouch = this.utils.canvasAndLandMarkClose(leftDotCords, leftHandIndexTip, this.drawingUtil.maxX, this.drawingUtil.maxY, 5);
+            if((leftTouch != this.prevLeftTouch) && !this.prevLeftPointPinch) {
                 this.prevLeftTouch = leftTouch;
                 if(leftTouch) {
                     jawToggle.checked = !jawToggle.checked;
@@ -76,8 +78,8 @@ class HandController {
         if (rightHandVisible) {
             const rightHand = detections.landmarks[newHandednessJson[this.rightHandString]];
             const rightHandIndexTip = rightHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
-            const rightTouch = this.utils.fingerTipXYAreClose(rightDotCords, rightHandIndexTip, 5);
-            if(rightTouch != this.prevRightTouch) {
+            const rightTouch = this.utils.canvasAndLandMarkClose(rightDotCords, rightHandIndexTip, this.drawingUtil.maxX, this.drawingUtil.maxY, 5);
+            if((rightTouch != this.prevRightTouch) && !this.prevRightPointPinch) {
                 this.prevRightTouch = rightTouch;
                 if(rightTouch) {
                     eyeBrowToggle.checked = !eyeBrowToggle.checked;
@@ -87,6 +89,17 @@ class HandController {
     }
 
     private pinchControls = async (detections, newHandednessJson) => {
+        let rightDotCords;
+        let leftDotCords;
+        const cameraMirroed = true;
+        if(cameraMirroed){
+            rightDotCords = { x: this.drawingUtil.topLeftDotX, y: this.drawingUtil.topLeftDotY, z: 0 }
+            leftDotCords = { x: this.drawingUtil.topRightDotX, y: this.drawingUtil.topRightDotY, z: 0 }
+        } else {
+            leftDotCords = { x: this.drawingUtil.topLeftDotX, y: this.drawingUtil.topLeftDotY, z: 0 }
+            rightDotCords = { x: this.drawingUtil.topRightDotX, y: this.drawingUtil.topRightDotY, z: 0 }
+        }
+
         const jawToggle = this.utils.getJawToggle();
         const eyeBrowToggle = this.utils.getEyeBrowToggle();
         
@@ -94,29 +107,35 @@ class HandController {
         const rightHandVisible = newHandednessJson[this.rightHandString] !== null;
     
         this.updateControlText(leftHandVisible, rightHandVisible);
-        if (leftHandVisible) {
+        if (leftHandVisible){
             const leftHand = detections.landmarks[newHandednessJson[this.leftHandString]];
             const leftHandThumbTip = leftHand[SupportedHandLandmarkers.THUMB_TIP]
             const leftHandIndexTip = leftHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
-            const leftTouch = this.utils.xyAreClose(leftHandThumbTip, leftHandIndexTip, 2);
-            if(leftTouch != this.prevLeftTouch) {
-                this.prevLeftTouch = leftTouch;
-                if(leftTouch) {
-                    jawToggle.checked = !jawToggle.checked;
+            const leftPointIsPinched = this.utils.landMarkerIntersectionAndCanvasPoint(leftHandThumbTip, leftHandIndexTip, leftDotCords, this.drawingUtil.maxX, this.drawingUtil.maxY, 2, 10)
+            if (leftPointIsPinched != this.prevLeftPointPinch) {
+                this.prevLeftPointPinch = leftPointIsPinched;
+                const leftHandPinchLabel = this.utils.getLeftHandPinchLabel();
+                if(leftPointIsPinched) {
+                    leftHandPinchLabel.textContent = 'OUCH!';
+                } else {
+                    leftHandPinchLabel.textContent = 'Waiting...';
                 }
             }
         }
-    
-    
-        if (rightHandVisible) {
+
+        if (rightHandVisible){
             const rightHand = detections.landmarks[newHandednessJson[this.rightHandString]];
             const rightHandThumbTip = rightHand[SupportedHandLandmarkers.THUMB_TIP];
             const rightHandIndexTip = rightHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
-            const rightTouch = this.utils.xyAreClose(rightHandThumbTip, rightHandIndexTip, 2);
-            if(rightTouch != this.prevRightTouch) {
-                this.prevRightTouch = rightTouch;
-                if(rightTouch) {
-                    eyeBrowToggle.checked = !eyeBrowToggle.checked;
+            const rightPointIsPinched = this.utils.landMarkerIntersectionAndCanvasPoint(rightHandThumbTip, rightHandIndexTip, rightDotCords, this.drawingUtil.maxX, this.drawingUtil.maxY, 2, 10)
+            console.log(`rightPointIsPinched`, rightPointIsPinched);
+            if (rightPointIsPinched != this.prevRightPointPinch) {
+                this.prevRightPointPinch = rightPointIsPinched;
+                const rightHandPinchLabel = this.utils.getRightHandPinchLabel();
+                if(rightPointIsPinched) {
+                    rightHandPinchLabel.textContent = 'OUCH!';
+                } else {
+                    rightHandPinchLabel.textContent = 'Waiting...';
                 }
             }
         }
@@ -143,8 +162,8 @@ class HandController {
             // Create a Dictonary of all coordinates -- ENUM HandCoordinatesEnum
     
             // Compare touch for interactions (x, y, z)
-            // this.pinchControls(detections, newHandednessJson); 
             this.pointControls(detections, newHandednessJson);
+            this.pinchControls(detections, newHandednessJson); 
     
         }
     
