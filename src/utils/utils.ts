@@ -35,12 +35,19 @@ const createHandednessJSONObject = (jsonArray: NestedMediaPipeHandednessType): {
     // As you can probably tell by MediaPipeHandednessType
     // These items are supposed to have their own index.
     // I think there might be a bug in the npm package or I just have a misunderstanding of how it works. 
+    // It could also purely be based with how I am importing things into this project as well.
     // Through a TON of thorough testing, i have found that the index for Left is always 1 and index for Right is always 0
     // However, its landmarks are not always at those positions in the landmarks array. 
     // The landmarks array is structed with the 0th element being the first hand detected and the 1st element being the second,
     // Which also matches the order the yare in in the handedness array. 
     // In their documentation they show the "Left" handedness value getting an index value of 0
     // But I was never able to make that happen. 
+    // IF This was a bug, and it was feature critical this is what I Have done in the past:
+    // - Make sure to file a bug report on the package's repo, with a reproducable project to assit the owners / prove it.
+    // - Lock the package version in my package.json (Do this becaues of next step)
+    // - Build a "patch-package" script. something will resolve the bug post npm install for builds / etc. 
+    // - Make a note / sev somewhere in our system to keep tabs on updates
+    // - Monitor and update code base when resolved. 
     jsonArray.map((handArray: MediaPipeHandednessType[], index) => {
         handArray.map((item: MediaPipeHandednessType) => {
             newJson[item.categoryName] = index;
