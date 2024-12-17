@@ -1,3 +1,19 @@
+type BlendShapesCategories = {
+    index: number;
+    score: number;
+    categoryName: string;
+    displayName: string;
+}
+
+// Type to match the structure of the handedness 
+type MediaPipeHandednessType = {
+    score: number;
+    index: number,
+    categoryName: string,
+    displayName: string,
+}
+type NestedMediaPipeHandednessType = MediaPipeHandednessType[][];
+
 /**
  * I didnt see anything in their documentation about accessing this value easier. I didnt really want to hardcode it 
  * @param jsonArray - This should map out the categories and their indexes 
@@ -81,10 +97,46 @@ const buildHandednessDictonary = (handedness: NestedMediaPipeHandednessType): {}
     return newHandednessJson;
 };
 
+const getAudioPlayer = (): HTMLAudioElement => {
+    const audioPlayer: HTMLAudioElement = document.getElementById('face-audio') as HTMLAudioElement;
+    return audioPlayer
+}
+
+const getVideoPlayer = (): HTMLVideoElement => {
+    const video: HTMLVideoElement = document.getElementById('webcam') as HTMLVideoElement;
+    return video;
+}
+
+const getLeftHandControlLabel = (): HTMLSpanElement => {
+    const leftHandControlLabel = document.getElementById("left-hand-control-status") as HTMLSpanElement;
+    return leftHandControlLabel;
+}
+
+const getRightHandControlLabel = (): HTMLSpanElement => {
+    const rightHandControlLabel = document.getElementById("right-hand-control-status") as HTMLSpanElement;
+    return rightHandControlLabel;
+}
+
+const getJawToggle = (): HTMLInputElement => {
+    const jawToggle: HTMLInputElement = document.getElementById('jaw-toggle') as HTMLInputElement;
+    return jawToggle;
+}
+
+const getEyeBrowToggle = (): HTMLInputElement => {
+    const eyeBrowToggle: HTMLInputElement = document.getElementById('eye-brow-toggle') as HTMLInputElement;
+    return eyeBrowToggle;
+}
+
 module.exports = {
     createBlendShapesDictionary,
     createHandednessJSONObject,
     xyAreClose,
     buildFaceBlendShapesDictonary,
-    buildHandednessDictonary
+    buildHandednessDictonary,
+    getAudioPlayer,
+    getVideoPlayer,
+    getLeftHandControlLabel,
+    getRightHandControlLabel,
+    getJawToggle,
+    getEyeBrowToggle
 }

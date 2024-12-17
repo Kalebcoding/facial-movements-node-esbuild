@@ -6,6 +6,7 @@
  */
 const createMarkers = require('./createMarkers');
 const utils = require('./utils');
+const handControls = require('./handControls');
 
 let faceTracker = null;
 (async () => {
@@ -13,43 +14,6 @@ let faceTracker = null;
     faceTracker = result;
 })(); 
 
-let handTracker = null;
-(async () => {
-    const result = await createMarkers.setHandLandmarker();
-    handTracker = result;
-})(); 
-
-
-
-
-// TODO: Re-eval and clean up types
-// Type Creations here
-// I dont think the project is configured / supports pulling in types from dependencies (CommonJS)
-// Making my own time based on the payload format of the BlendShapes
-type BlendShapesCategories = {
-    index: number;
-    score: number;
-    categoryName: string;
-    displayName: string;
-}
-
-
-// Type to match the structure of the handedness 
-type MediaPipeHandednessType = {
-    score: number;
-    index: number,
-    categoryName: string,
-    displayName: string,
-}
-type NestedMediaPipeHandednessType = MediaPipeHandednessType[][];
-
-// Maping of hand coordinates (some)
-enum HandCoordinatesEnum {
-    THUMB_TIP = 4,
-    INDEX_FINGER_TIP = 8,
-    MIDDLE_FINGER_TIP = 12,
-    RING_FINGER_TIP = 16,
-}
 
 // Supported Movements
 enum SupportedMovements {
@@ -58,14 +22,6 @@ enum SupportedMovements {
     BroDownRight = 'browDownRight'
 }
 
-// Grabbing all of the document elements I will need later on here. 
-const audioPlayer: HTMLAudioElement = document.getElementById('face-audio') as HTMLAudioElement;
-const video: HTMLVideoElement = document.getElementById('webcam') as HTMLVideoElement;
-const jawToggle: HTMLInputElement = document.getElementById('jaw-toggle') as HTMLInputElement;
-const eyeBrowToggle: HTMLInputElement = document.getElementById('eye-brow-toggle') as HTMLInputElement;
-const blinkToggle: HTMLInputElement = document.getElementById('blink-toggle') as HTMLInputElement;
-const leftHandControlLabel = document.getElementById("left-hand-control-status") as HTMLSpanElement;
-const rightHandControlLabel = document.getElementById("right-hand-control-status") as HTMLSpanElement;
 
 /**
  * Gets audio source with some parameters.
@@ -74,6 +30,7 @@ const rightHandControlLabel = document.getElementById("right-hand-control-status
  * @param showControls - If we want to show or hide the audio controls
  */
 const setAudioSource = (path: string, showControls: boolean): void => {
+    let audioPlayer = utils.getAudioPlayer();
     if (audioPlayer instanceof HTMLAudioElement) {
         audioPlayer.src = path;
         showControls ? audioPlayer.setAttribute('controls', '') : audioPlayer.removeAttribute("controls");
@@ -89,7 +46,7 @@ let prevMouthClosed = false;
  * Jaw close should stop music
  * @param detections 
  */
-const jawMusicControl = async (detections, blendShapesDictionary) => {
+const jawMusicControl = async (detections, blendShapesDictionary, audioPlayer) => {
     const jawOpenScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.JawOpen]].score * 100;
     const mouthOpen = 100 - jawOpenScore < 70;
     const mouthClosed = 100 - jawOpenScore > 95; 
@@ -115,7 +72,7 @@ let prevRightBrowIsdown = false;
  * Right Brow Down should increase the audio player volume
  * @param detections 
  */
-const eyeBrowControl = async (detections, blendShapesDictionary) => {
+const eyeBrowControl = async (detections, blendShapesDictionary, audioPlayer) => {
     const browDownLeftScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.BrowDownLeft]].score * 100;
     const leftBrowIsDown = 100 - browDownLeftScore < 45;
     const browDownRightScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.BroDownRight]].score * 100;
@@ -150,6 +107,11 @@ const eyeBrowControl = async (detections, blendShapesDictionary) => {
  * API only exposts jaw open, so we have to use that to track closing / open. 
  */
 const faceControls = async () => {
+    const video = utils.getVideoPlayer();
+    const audioPlayer = utils.getAudioPlayer();
+    const jawToggle = utils.getJawToggle();
+    const eyeBrowToggle = utils.getEyeBrowToggle();
+
     let blendShapesDictionary: Record<string, number> = {};
     let lastVideoTime: Number = -1;
     let startTimeMs: Number = performance.now();
@@ -160,8 +122,8 @@ const faceControls = async () => {
         // TODO: Can improve this function
         blendShapesDictionary = utils.buildFaceBlendShapesDictonary(detections.faceBlendshapes, blendShapesDictionary);
 
-        jawToggle.checked && jawMusicControl(detections, blendShapesDictionary);
-        eyeBrowToggle.checked && eyeBrowControl(detections, blendShapesDictionary);
+        jawToggle.checked && jawMusicControl(detections, blendShapesDictionary, audioPlayer);
+        eyeBrowToggle.checked && eyeBrowControl(detections, blendShapesDictionary, audioPlayer);
     }
 
     // We can set the response of this to an object to capture id
@@ -169,98 +131,15 @@ const faceControls = async () => {
     window.requestAnimationFrame(faceControls);
 }
 
-const updateControlText = (leftHandVisible: boolean, rightHandVisible: boolean) => {
-    
-    if(leftHandVisible) {
-        leftHandControlLabel.textContent = "Enabled";
-    } else {
-        leftHandControlLabel.textContent = "Disabled";
-    }
-
-    if(rightHandVisible) {
-        rightHandControlLabel.textContent = "Enabled";
-    } else {
-        rightHandControlLabel.textContent = "Disabled";
-    }
-}
-
-let prevLeftTouch = false;
-let prevRightTouch = false;
-const pinchControls = async (detections, newHandednessJson) => {
-    const leftHandVisible = newHandednessJson["Left"] !== null;
-    const rightHandVisible = newHandednessJson["Right"] !== null;
-
-    updateControlText(leftHandVisible, rightHandVisible);
-    if (leftHandVisible) {
-        const leftHand = detections.landmarks[newHandednessJson["Left"]];
-        const leftHandThumbTip = leftHand[HandCoordinatesEnum.THUMB_TIP]
-        const leftHandIndexTip = leftHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
-        const leftTouch = utils.xyAreClose(leftHandThumbTip, leftHandIndexTip, 2);
-        if(leftTouch != prevLeftTouch) {
-            prevLeftTouch = leftTouch;
-            if(leftTouch) {
-                jawToggle.checked = !jawToggle.checked;
-            }
-        }
-    }
-
-
-    if (rightHandVisible) {
-        const rightHand = detections.landmarks[newHandednessJson["Right"]];
-        const rightHandThumbTip = rightHand[HandCoordinatesEnum.THUMB_TIP];
-        const rightHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
-        const rightTouch = utils.xyAreClose(rightHandThumbTip, rightHandIndexTip, 2);
-        if(rightTouch != prevRightTouch) {
-            prevRightTouch = rightTouch;
-            if(rightTouch) {
-                eyeBrowToggle.checked = !eyeBrowToggle.checked;
-            }
-        }
-    }
-}
-
-/**
- * Supported hand gesture landmarker controls
- * @param detections 
- */
-const handControls = async (detections) => {
-    let newHandednessJson: {} = {
-        Left: null,
-        Right: null
-    };
-
-    let lastVideoTime: Number = -1;
-    let startTimeMs: Number = performance.now();
-    
-    if (video.currentTime != lastVideoTime) {
-        lastVideoTime = video.currentTime;
-        const detections = handTracker.detectForVideo(video, startTimeMs);
-
-        // EDIT / Note: Because the index value from detections doesnt change for left if its the only one in view. Gonna just get it working with both hands in view for now.
-        // Determine if Left, Right, Both, or None are visible through handedness
-        // Set indexes of each to a variable
-        newHandednessJson = utils.buildHandednessDictonary(detections.handedness)
-        // Create a Dictonary of all coordinates -- ENUM HandCoordinatesEnum
-
-        // Compare touch for interactions (x, y, z)
-        pinchControls(detections, newHandednessJson); 
-
-    }
-
-    // We can set the response of this to an object to capture id
-    // Then stop it so we dont spam the browser, but thats a different optimization. 
-    window.requestAnimationFrame(handControls);
-}
-
-
 /**
  * Request media permissions and push the webcam to browser
  */
 const setWebcamStream = async () => {
+    const video = utils.getVideoPlayer();
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
         video.srcObject = stream;
         video.addEventListener("loadeddata", faceControls);
-        video.addEventListener("loadeddata", handControls);
+        video.addEventListener("loadeddata", handControls.handEventWrapper);
     });
 }
 
