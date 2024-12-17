@@ -4,16 +4,16 @@
  * We want to do these first because they make take some time to create
  * In a real application I would likely apply some loading state (depending on UX / needs)
  */
-const createTrackers = require('./createMarkers');
+const createMarkers = require('./createMarkers');
 let faceTracker = null;
 (async () => {
-    const result = await createTrackers.setFaceLandmarker();
+    const result = await createMarkers.setFaceLandmarker();
     faceTracker = result;
 })(); 
 
 let handTracker = null;
 (async () => {
-    const result = await createTrackers.setHandLandmarker();
+    const result = await createMarkers.setHandLandmarker();
     handTracker = result;
 })(); 
 
