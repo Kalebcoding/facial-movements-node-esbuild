@@ -65,6 +65,17 @@ const xyAreClose = (json1: {x: number, y: number, z: number}, json2: {x: number,
     return xClose && yClose;
 }
 
+const fingerTipAndDotAreClose = (num1: number, num2: number, tolerance: number) => {
+    return Math.abs((num1) - (num2 * 100)) < tolerance;
+}
+const fingerTipXYAreClose = (json1: {x: number, y: number, z: number}, json2: {x: number, y: number, z: number}, tolerance: number) => {
+    const xClose = fingerTipAndDotAreClose(json1.x, json2.x, tolerance); 
+    const yClose = fingerTipAndDotAreClose(json1.y, json2.y, tolerance); 
+    // const zClose = coordsAreClose(json1.z, json2.z, tolerance); 
+    return xClose && yClose;
+}
+
+
 /**
  * Create a dictonary to use that has all the category names as the key and the index they are as the value
  * @param faceBlendshapes 
@@ -127,6 +138,26 @@ const getEyeBrowToggle = (): HTMLInputElement => {
     return eyeBrowToggle;
 }
 
+const getVideoCanvas = (): HTMLCanvasElement => {
+    const canvasElement: HTMLCanvasElement = document.getElementById('output_canvas') as HTMLCanvasElement;
+    return canvasElement;
+}
+
+const getDrawOnCanvasButton = (): HTMLButtonElement => {
+    const button: HTMLButtonElement = document.getElementById('draw-canvas') as HTMLButtonElement;
+    return button;
+}
+
+const getInitCanvasButton = (): HTMLButtonElement => {
+    const button: HTMLButtonElement = document.getElementById('init-canvas') as HTMLButtonElement;
+    return button;
+}
+
+const getClearCanvasButton = (): HTMLButtonElement => {
+    const button: HTMLButtonElement = document.getElementById('clear-canvas') as HTMLButtonElement;
+    return button;
+}
+
 const setAudioSource = (path: string, showControls: boolean): void => {
     let audioPlayer = getAudioPlayer();
     if (audioPlayer instanceof HTMLAudioElement) {
@@ -148,6 +179,7 @@ module.exports = {
     createBlendShapesDictionary,
     createHandednessJSONObject,
     xyAreClose,
+    fingerTipXYAreClose,
     buildFaceBlendShapesDictonary,
     buildHandednessDictonary,
     getAudioPlayer,
@@ -156,6 +188,10 @@ module.exports = {
     getRightHandControlLabel,
     getJawToggle,
     getEyeBrowToggle,
+    getDrawOnCanvasButton,
+    getClearCanvasButton,
+    getInitCanvasButton,
+    getVideoCanvas,
     setAudioSource,
     setWebcamStream
 }

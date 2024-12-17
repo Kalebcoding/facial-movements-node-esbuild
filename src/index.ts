@@ -1,13 +1,15 @@
 
 // All Requires needed for application
 const taskVision = require('@mediapipe/tasks-vision');
-const taskVisionCreatorClass = require('./taskVisionCreator/taskVisionCreator');
-const faceControllerClass = require('./faceController/faceController');
-const handControllerClass = require('./handController/handController');
+const TaskVisionCreatorClass = require('./taskVisionCreator/taskVisionCreator');
+const FaceControllerClass = require('./faceController/faceController');
+const HandControllerClass = require('./handController/handController');
+const CustomDrawingUtilityClass  = require ('./utils/customDrawingUtility');
 const utils = require('./utils/utils');
 
 (async () => {
-    const { HandLandmarker, FaceLandmarker, FilesetResolver, DrawingUtils } = taskVision;
+    const { HandLandmarker, FaceLandmarker, FilesetResolver } = taskVision;
+    const drawingUtil = new CustomDrawingUtilityClass(utils);
 
     const taskFaceOptions = {
         baseOptions: {
@@ -19,8 +21,8 @@ const utils = require('./utils/utils');
         numFaces: 1,
     };
 
-    const FaceVisionCreatorInstance = await taskVisionCreatorClass.create(FilesetResolver, FaceLandmarker, taskFaceOptions);
-    const FaceController = new faceControllerClass(FaceVisionCreatorInstance.getTaskLandmarker(), utils);
+    const FaceVisionCreatorInstance = await TaskVisionCreatorClass.create(FilesetResolver, FaceLandmarker, taskFaceOptions);
+    const FaceController = new FaceControllerClass(FaceVisionCreatorInstance.getTaskLandmarker(), utils);
 
     const taskHandOptions = {
         baseOptions: {
@@ -31,9 +33,8 @@ const utils = require('./utils/utils');
         numHands: 2
     }
 
-    const HandVisionCreatorInstance = await taskVisionCreatorClass.create(FilesetResolver, HandLandmarker, taskHandOptions);
-    const HandController = new handControllerClass(HandVisionCreatorInstance.getTaskLandmarker(), utils);
-
+    const HandVisionCreatorInstance = await TaskVisionCreatorClass.create(FilesetResolver, HandLandmarker, taskHandOptions);
+    const HandController = new HandControllerClass(HandVisionCreatorInstance.getTaskLandmarker(), utils, drawingUtil);
 
     utils.setAudioSource('./music/OhHoney.mp3', true);
     utils.setWebcamStream(FaceController.faceEventManager, HandController.handEventManager);

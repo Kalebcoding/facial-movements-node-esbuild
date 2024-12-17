@@ -9,12 +9,14 @@ class HandController {
 
     private handLandmarker;
     private utils; 
+    private drawingUtil;
     private prevLeftTouch = false;
     private prevRightTouch = false;
 
-    constructor(handLandmarker, utils) {
+    constructor(handLandmarker, utils, drawingUtil) {
         this.handLandmarker = handLandmarker;
         this.utils = utils;
+        this.drawingUtil = drawingUtil;
     }
 
     private updateControlText = (leftHandVisible: boolean, rightHandVisible: boolean) => {
@@ -30,6 +32,54 @@ class HandController {
             rightHandControlLabel.textContent = "Enabled";
         } else {
             rightHandControlLabel.textContent = "Disabled";
+        }
+    }
+
+    private pointControls = async (detections, newHandednessJson) => {
+
+        // TODO: Refactor this. Messy.
+        // We check if the camera is mirrored, if so the dots will be reveresed.
+        // Like could solve this in a more mature way. 
+        let rightDotCords;
+        let leftDotCords;
+        const cameraMirroed = true;
+        if(cameraMirroed){
+            rightDotCords = { x: this.drawingUtil.topLeftDotX / (this.drawingUtil.maxX / 100) , y: this.drawingUtil.topLeftDotY / (this.drawingUtil.maxY / 100), z: 0 }
+            leftDotCords = { x: this.drawingUtil.topRightDotX / (this.drawingUtil.maxX / 100), y: this.drawingUtil.topRightDotY / (this.drawingUtil.maxY / 100), z: 0 }
+        } else {
+            leftDotCords = { x: this.drawingUtil.topLeftDotX / (this.drawingUtil.maxX / 100) , y: this.drawingUtil.topLeftDotY / (this.drawingUtil.maxY / 100), z: 0 }
+            rightDotCords = { x: this.drawingUtil.topRightDotX / (this.drawingUtil.maxX / 100), y: this.drawingUtil.topRightDotY / (this.drawingUtil.maxY / 100), z: 0 }
+        }
+        const jawToggle = this.utils.getJawToggle();
+        const eyeBrowToggle = this.utils.getEyeBrowToggle();
+        
+        const leftHandVisible = newHandednessJson["Left"] !== null;
+        const rightHandVisible = newHandednessJson["Right"] !== null;
+    
+        this.updateControlText(leftHandVisible, rightHandVisible);
+        if (leftHandVisible) {
+            const leftHand = detections.landmarks[newHandednessJson["Left"]];
+            const leftHandIndexTip = leftHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+            const leftTouch = this.utils.fingerTipXYAreClose(leftDotCords, leftHandIndexTip, 5);
+            if(leftTouch != this.prevLeftTouch) {
+                this.prevLeftTouch = leftTouch;
+                if(leftTouch) {
+                    jawToggle.checked = !jawToggle.checked;
+                }
+            }
+        }
+    
+        if (rightHandVisible) {
+            const rightHand = detections.landmarks[newHandednessJson["Right"]];
+            const rightHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+            const rightTouch = this.utils.fingerTipXYAreClose(rightDotCords, rightHandIndexTip, 5);
+            console.log(`rightTouch`, rightTouch);
+            if(rightTouch != this.prevRightTouch) {
+                this.prevRightTouch = rightTouch;
+                if(rightTouch) {
+                    eyeBrowToggle.checked = !eyeBrowToggle.checked;
+                }
+            }
         }
     }
 
@@ -90,7 +140,8 @@ class HandController {
             // Create a Dictonary of all coordinates -- ENUM HandCoordinatesEnum
     
             // Compare touch for interactions (x, y, z)
-            this.pinchControls(detections, newHandednessJson); 
+            // this.pinchControls(detections, newHandednessJson); 
+            this.pointControls(detections, newHandednessJson);
     
         }
     
