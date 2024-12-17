@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc && esbuild dist/index.js --bundle --platform=node --format=cjs --outfile=bundle.js"
+    "copyDir": "cp ./src/index.html ./dist && cp ./src/index.css ./dist && cp -r ./src/music ./dist/music",
+    "build": "tsc && esbuild dist/index.js --bundle --platform=node --format=cjs --outfile=dist/bundle.js && npm run copyDir"
   },
   "keywords": [],
   "author": "",
