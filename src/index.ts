@@ -4,9 +4,9 @@
  * We want to do these first because they make take some time to create
  * In a real application I would likely apply some loading state (depending on UX / needs)
  */
-const utils = require('./utils');
-const handControls = require('./handControls');
-const faceControls = require('./faceControls');
+const utils = require('./utils/utils');
+const handControls = require('./handControl/handControls');
+const faceControls = require('./faceControl/faceControls');
 
 
 /**
@@ -39,5 +39,5 @@ const setWebcamStream = async () => {
 
 // Function Calls
 
-setAudioSource('./OhHoney.mp3', true);
+setAudioSource('./music/OhHoney.mp3', true);
 setWebcamStream();

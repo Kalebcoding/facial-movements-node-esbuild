@@ -1,10 +1,10 @@
-const createHandMarkers = require('./createMarkers');
+const createHandMarkers = require('../utils/createMarkers');
 let handTracker = null;
 (async () => {
     const result = await createHandMarkers.setHandLandmarker();
     handTracker = result;
 })(); 
-const handUtils = require('./utils');
+const handUtils = require('../utils/utils');
 
 enum HandCoordinatesEnum {
     THUMB_TIP = 4,

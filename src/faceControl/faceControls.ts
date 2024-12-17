@@ -1,5 +1,5 @@
-const createFaceMarkers = require('./createMarkers');
-const faceUtils = require('./utils');
+const createFaceMarkers = require('../utils/createMarkers');
+const faceUtils = require('../utils/utils');
 let faceTracker = null;
 (async () => {
     const result = await createFaceMarkers.setFaceLandmarker();
