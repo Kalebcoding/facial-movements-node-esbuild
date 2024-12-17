@@ -1,8 +1,6 @@
-enum HandCoordinatesEnum {
+enum SupportedHandLandmarkers {
     THUMB_TIP = 4,
     INDEX_FINGER_TIP = 8,
-    MIDDLE_FINGER_TIP = 12,
-    RING_FINGER_TIP = 16,
 }
 
 class HandController {
@@ -65,7 +63,7 @@ class HandController {
         this.updateControlText(leftHandVisible, rightHandVisible);
         if (leftHandVisible) {
             const leftHand = detections.landmarks[newHandednessJson[this.leftHandString]];
-            const leftHandIndexTip = leftHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+            const leftHandIndexTip = leftHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
             const leftTouch = this.utils.fingerTipXYAreClose(leftDotCords, leftHandIndexTip, 5);
             if(leftTouch != this.prevLeftTouch) {
                 this.prevLeftTouch = leftTouch;
@@ -77,7 +75,7 @@ class HandController {
     
         if (rightHandVisible) {
             const rightHand = detections.landmarks[newHandednessJson[this.rightHandString]];
-            const rightHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+            const rightHandIndexTip = rightHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
             const rightTouch = this.utils.fingerTipXYAreClose(rightDotCords, rightHandIndexTip, 5);
             if(rightTouch != this.prevRightTouch) {
                 this.prevRightTouch = rightTouch;
@@ -98,8 +96,8 @@ class HandController {
         this.updateControlText(leftHandVisible, rightHandVisible);
         if (leftHandVisible) {
             const leftHand = detections.landmarks[newHandednessJson[this.leftHandString]];
-            const leftHandThumbTip = leftHand[HandCoordinatesEnum.THUMB_TIP]
-            const leftHandIndexTip = leftHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+            const leftHandThumbTip = leftHand[SupportedHandLandmarkers.THUMB_TIP]
+            const leftHandIndexTip = leftHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
             const leftTouch = this.utils.xyAreClose(leftHandThumbTip, leftHandIndexTip, 2);
             if(leftTouch != this.prevLeftTouch) {
                 this.prevLeftTouch = leftTouch;
@@ -112,8 +110,8 @@ class HandController {
     
         if (rightHandVisible) {
             const rightHand = detections.landmarks[newHandednessJson[this.rightHandString]];
-            const rightHandThumbTip = rightHand[HandCoordinatesEnum.THUMB_TIP];
-            const rightHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
+            const rightHandThumbTip = rightHand[SupportedHandLandmarkers.THUMB_TIP];
+            const rightHandIndexTip = rightHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
             const rightTouch = this.utils.xyAreClose(rightHandThumbTip, rightHandIndexTip, 2);
             if(rightTouch != this.prevRightTouch) {
                 this.prevRightTouch = rightTouch;
