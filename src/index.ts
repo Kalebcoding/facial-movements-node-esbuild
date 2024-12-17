@@ -1,6 +1,6 @@
 
 // All Requires needed for application
-const taskVision = require('@mediapipe/tasks-vision')
+const taskVision = require('@mediapipe/tasks-vision');
 const taskVisionCreatorClass = require('./taskVisionCreator/taskVisionCreator');
 const faceControllerClass = require('./faceController/faceController');
 const handControllerClass = require('./handController/handController');
@@ -8,9 +8,6 @@ const utils = require('./utils/utils');
 
 (async () => {
     const { HandLandmarker, FaceLandmarker, FilesetResolver, DrawingUtils } = taskVision;
-
-    // See about making a Utils class, instatiating it, and using it where you need.
-    // Maybe divide up the utils class. 
 
     const taskFaceOptions = {
         baseOptions: {
