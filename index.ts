@@ -1,19 +1,35 @@
-const taskVision = require('@mediapipe/tasks-vision')
-const { HandLandmarker, FaceLandmarker, FilesetResolver, DrawingUtils } = taskVision;
 
+/**
+ * Require and async create for the FaceLandmarker and HandLandmarker
+ * We want to do these first because they make take some time to create
+ * In a real application I would likely apply some loading state (depending on UX / needs)
+ */
+const createTrackers = require('./createMarkers');
+let faceTracker = null;
+(async () => {
+    const result = await createTrackers.setFaceLandmarker();
+    faceTracker = result;
+})(); 
 
-// Setting up main variables i will use later
+let handTracker = null;
+(async () => {
+    const result = await createTrackers.setHandLandmarker();
+    handTracker = result;
+})(); 
+
+// Grabbing all of the document elements I will need later on here. 
 const audioPlayer: HTMLAudioElement = document.getElementById('face-audio') as HTMLAudioElement;
 const video: HTMLVideoElement = document.getElementById('webcam') as HTMLVideoElement;
 const jawToggle: HTMLInputElement = document.getElementById('jaw-toggle') as HTMLInputElement;
 const eyeBrowToggle: HTMLInputElement = document.getElementById('eye-brow-toggle') as HTMLInputElement;
 const blinkToggle: HTMLInputElement = document.getElementById('blink-toggle') as HTMLInputElement;
+const leftHandControlLabel = document.getElementById("left-hand-control-status") as HTMLSpanElement;
+const rightHandControlLabel = document.getElementById("right-hand-control-status") as HTMLSpanElement;
 
-// Would of used webcamTracker: FaceLandmarker here but its not liking it. Like just becaue I dont have proper bundler / configs setup. 
-let webcamTracker = null;
-let handTracker = null; 
 
-// Type to match the structure of the blendshape categories 
+// Type Creations here
+// I dont think the project is configured / supports pulling in types from dependencies (CommonJS)
+// Making my own time based on the payload format of the BlendShapes
 type BlendShapesCategories = {
     index: number;
     score: number;
@@ -55,41 +71,6 @@ enum SupportedMovements {
 
 // Dumb workaround for spam
 let eyebrowLocked: boolean = false; 
-
-/**
- * Create the Facelandmarker object for us
- */
-const setFaceLandmarker = async (): Promise<void> => {
-    const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-    );
-
-    webcamTracker = await FaceLandmarker.createFromOptions(vision, {
-        baseOptions: {
-            modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
-            delegate: "GPU"
-        },
-        outputFaceBlendshapes: true,
-        runningMode: "VIDEO",
-        numFaces: 1,
-    })
-};
-
-const setHandLandmarker = async (): Promise<void> => {
-    const vision = await FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
-    );
-
-    handTracker = await HandLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
-          delegate: "GPU"
-        },
-        runningMode: "VIDEO",
-        numHands: 2
-      });
-}
-
 
 /**
  * Gets audio source with some parameters.
@@ -223,9 +204,9 @@ let prevRightBrowIsdown = false;
  */
 const eyeBrowControl = async (detections) => {
     const browDownLeftScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.BrowDownLeft]].score * 100;
-    const leftBrowIsDown = 100 - browDownLeftScore < 35;
+    const leftBrowIsDown = 100 - browDownLeftScore < 45;
     const browDownRightScore = detections?.faceBlendshapes[0]?.categories[blendShapesDictionary[SupportedMovements.BroDownRight]].score * 100;
-    const rightBrowIsDown = 100 - browDownRightScore < 35;
+    const rightBrowIsDown = 100 - browDownRightScore < 45;
 
 
     if(prevLeftBrowIsDown !== leftBrowIsDown){
@@ -260,7 +241,7 @@ const faceControls = async () => {
     let startTimeMs: Number = performance.now();
     if (video.currentTime != lastVideoTime) {
         lastVideoTime = video.currentTime;
-        const detections = webcamTracker.detectForVideo(video, startTimeMs);
+        const detections = faceTracker.detectForVideo(video, startTimeMs);
 
         buildFaceBlendShapesDictonary(detections.faceBlendshapes);
 
@@ -274,14 +255,13 @@ const faceControls = async () => {
 }
 
 const updateControlText = (leftHandVisible: boolean, rightHandVisible: boolean) => {
-    const leftHandControlLabel = document.getElementById("left-hand-control-status");
+    
     if(leftHandVisible) {
         leftHandControlLabel.textContent = "Enabled";
     } else {
         leftHandControlLabel.textContent = "Disabled";
     }
 
-    const rightHandControlLabel = document.getElementById("right-hand-control-status");
     if(rightHandVisible) {
         rightHandControlLabel.textContent = "Enabled";
     } else {
@@ -365,7 +345,6 @@ const setWebcamStream = async () => {
 
 
 // Function Calls
-setFaceLandmarker();
-setHandLandmarker();
+
 setAudioSource('./OhHoney.mp3', true);
 setWebcamStream();
