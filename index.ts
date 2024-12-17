@@ -27,6 +27,7 @@ const leftHandControlLabel = document.getElementById("left-hand-control-status")
 const rightHandControlLabel = document.getElementById("right-hand-control-status") as HTMLSpanElement;
 
 
+// TODO: Re-eval and clean up types
 // Type Creations here
 // I dont think the project is configured / supports pulling in types from dependencies (CommonJS)
 // Making my own time based on the payload format of the BlendShapes
@@ -60,7 +61,6 @@ enum HandCoordinatesEnum {
     RING_FINGER_TIP = 16,
 }
 
-
 // Supported Movements
 enum SupportedMovements {
     JawOpen = 'jawOpen',
@@ -68,9 +68,6 @@ enum SupportedMovements {
     BroDownRight = 'browDownRight'
 }
 
-
-// Dumb workaround for spam
-let eyebrowLocked: boolean = false; 
 
 /**
  * Gets audio source with some parameters.
