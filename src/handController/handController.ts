@@ -5,7 +5,7 @@ enum HandCoordinatesEnum {
     RING_FINGER_TIP = 16,
 }
 
-class HandControlClass {
+class HandController {
 
     private handLandmarker;
     private utils; 
@@ -69,7 +69,7 @@ class HandControlClass {
         }
     }
 
-    public handEventWrapper = async () => {
+    public handEventManager = async () => {
         let newHandednessJson: {} = {
             Left: null,
             Right: null
@@ -96,8 +96,8 @@ class HandControlClass {
     
         // We can set the response of this to an object to capture id
         // Then stop it so we dont spam the browser, but thats a different optimization. 
-        window.requestAnimationFrame(this.handEventWrapper);
+        window.requestAnimationFrame(this.handEventManager);
     }
 }
 
-module.exports = HandControlClass;
+module.exports = HandController;
