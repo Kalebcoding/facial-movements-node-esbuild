@@ -8,6 +8,7 @@
   <body>
     <div style="position: relative">
         <video id="webcam" autoplay></video>
+        <canvas class="output_canvas" id="output_canvas" style="position: absolute; left: 0px; top: 0px;"></canvas>
     </div>
     <div>
         <audio id="face-audio">
@@ -23,6 +24,11 @@
     <div>
       <h2> Left Hand Control Status: <span id="left-hand-control-status"> Disabled </span></h2>
       <h2> Right Hand Control Status: <span id="right-hand-control-status"> Disabled </span></h2>
+    </div>
+    <div>
+      <button id="init-canvas"> Init Canvas </button>
+      <button id="draw-canvas"> Draw on Canvas </button>
+      <button id="clear-canvas"> Clear Canvas</button>
     </div>
     <script src="./bundle.js"></script>
   </body>

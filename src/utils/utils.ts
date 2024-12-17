@@ -31,9 +31,26 @@ const createBlendShapesDictionary = (jsonArray: BlendShapesCategories[]): Record
 
 const createHandednessJSONObject = (jsonArray: NestedMediaPipeHandednessType): {} => {
     let newJson: {} = {};
-    jsonArray.map((handArray: MediaPipeHandednessType[]) => {
+
+    // As you can probably tell by MediaPipeHandednessType
+    // These items are supposed to have their own index.
+    // I think there might be a bug in the npm package or I just have a misunderstanding of how it works. 
+    // It could also purely be based with how I am importing things into this project as well.
+    // Through a TON of thorough testing, i have found that the index for Left is always 1 and index for Right is always 0
+    // However, its landmarks are not always at those positions in the landmarks array. 
+    // The landmarks array is structed with the 0th element being the first hand detected and the 1st element being the second,
+    // Which also matches the order the yare in in the handedness array. 
+    // In their documentation they show the "Left" handedness value getting an index value of 0
+    // But I was never able to make that happen. 
+    // IF This was a bug, and it was feature critical this is what I Have done in the past:
+    // - Make sure to file a bug report on the package's repo, with a reproducable project to assit the owners / prove it.
+    // - Lock the package version in my package.json (Do this becaues of next step)
+    // - Build a "patch-package" script. something will resolve the bug post npm install for builds / etc. 
+    // - Make a note / sev somewhere in our system to keep tabs on updates
+    // - Monitor and update code base when resolved. 
+    jsonArray.map((handArray: MediaPipeHandednessType[], index) => {
         handArray.map((item: MediaPipeHandednessType) => {
-            newJson[item.categoryName] = jsonArray.length === 2 ? item.index : 0;
+            newJson[item.categoryName] = index;
         })
     })
     if(!newJson.hasOwnProperty("Right")){
@@ -43,7 +60,6 @@ const createHandednessJSONObject = (jsonArray: NestedMediaPipeHandednessType): {
     if(!newJson.hasOwnProperty("Left")){
         newJson["Left"] = null;
     }
-
     return newJson;
 }
     
@@ -64,6 +80,17 @@ const xyAreClose = (json1: {x: number, y: number, z: number}, json2: {x: number,
     // const zClose = coordsAreClose(json1.z, json2.z, tolerance); 
     return xClose && yClose;
 }
+
+const fingerTipAndDotAreClose = (num1: number, num2: number, tolerance: number) => {
+    return Math.abs((num1) - (num2 * 100)) < tolerance;
+}
+const fingerTipXYAreClose = (json1: {x: number, y: number, z: number}, json2: {x: number, y: number, z: number}, tolerance: number) => {
+    const xClose = fingerTipAndDotAreClose(json1.x, json2.x, tolerance); 
+    const yClose = fingerTipAndDotAreClose(json1.y, json2.y, tolerance); 
+    // const zClose = coordsAreClose(json1.z, json2.z, tolerance); 
+    return xClose && yClose;
+}
+
 
 /**
  * Create a dictonary to use that has all the category names as the key and the index they are as the value
@@ -127,6 +154,26 @@ const getEyeBrowToggle = (): HTMLInputElement => {
     return eyeBrowToggle;
 }
 
+const getVideoCanvas = (): HTMLCanvasElement => {
+    const canvasElement: HTMLCanvasElement = document.getElementById('output_canvas') as HTMLCanvasElement;
+    return canvasElement;
+}
+
+const getDrawOnCanvasButton = (): HTMLButtonElement => {
+    const button: HTMLButtonElement = document.getElementById('draw-canvas') as HTMLButtonElement;
+    return button;
+}
+
+const getInitCanvasButton = (): HTMLButtonElement => {
+    const button: HTMLButtonElement = document.getElementById('init-canvas') as HTMLButtonElement;
+    return button;
+}
+
+const getClearCanvasButton = (): HTMLButtonElement => {
+    const button: HTMLButtonElement = document.getElementById('clear-canvas') as HTMLButtonElement;
+    return button;
+}
+
 const setAudioSource = (path: string, showControls: boolean): void => {
     let audioPlayer = getAudioPlayer();
     if (audioPlayer instanceof HTMLAudioElement) {
@@ -148,6 +195,7 @@ module.exports = {
     createBlendShapesDictionary,
     createHandednessJSONObject,
     xyAreClose,
+    fingerTipXYAreClose,
     buildFaceBlendShapesDictonary,
     buildHandednessDictonary,
     getAudioPlayer,
@@ -156,6 +204,10 @@ module.exports = {
     getRightHandControlLabel,
     getJawToggle,
     getEyeBrowToggle,
+    getDrawOnCanvasButton,
+    getClearCanvasButton,
+    getInitCanvasButton,
+    getVideoCanvas,
     setAudioSource,
     setWebcamStream
 }
