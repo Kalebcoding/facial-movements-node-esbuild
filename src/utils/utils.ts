@@ -31,9 +31,19 @@ const createBlendShapesDictionary = (jsonArray: BlendShapesCategories[]): Record
 
 const createHandednessJSONObject = (jsonArray: NestedMediaPipeHandednessType): {} => {
     let newJson: {} = {};
-    jsonArray.map((handArray: MediaPipeHandednessType[]) => {
+
+    // As you can probably tell by MediaPipeHandednessType
+    // These items are supposed to have their own index.
+    // I think there might be a bug in the npm package or I just have a misunderstanding of how it works. 
+    // Through a TON of thorough testing, i have found that the index for Left is always 1 and index for Right is always 0
+    // However, its landmarks are not always at those positions in the landmarks array. 
+    // The landmarks array is structed with the 0th element being the first hand detected and the 1st element being the second,
+    // Which also matches the order the yare in in the handedness array. 
+    // In their documentation they show the "Left" handedness value getting an index value of 0
+    // But I was never able to make that happen. 
+    jsonArray.map((handArray: MediaPipeHandednessType[], index) => {
         handArray.map((item: MediaPipeHandednessType) => {
-            newJson[item.categoryName] = jsonArray.length === 2 ? item.index : 0;
+            newJson[item.categoryName] = index;
         })
     })
     if(!newJson.hasOwnProperty("Right")){
@@ -43,7 +53,6 @@ const createHandednessJSONObject = (jsonArray: NestedMediaPipeHandednessType): {
     if(!newJson.hasOwnProperty("Left")){
         newJson["Left"] = null;
     }
-
     return newJson;
 }
     

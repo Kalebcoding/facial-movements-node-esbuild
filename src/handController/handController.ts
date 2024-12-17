@@ -12,6 +12,8 @@ class HandController {
     private drawingUtil;
     private prevLeftTouch = false;
     private prevRightTouch = false;
+    private leftHandString = "Left";
+    private rightHandString = "Right";
 
     constructor(handLandmarker, utils, drawingUtil) {
         this.handLandmarker = handLandmarker;
@@ -53,12 +55,16 @@ class HandController {
         const jawToggle = this.utils.getJawToggle();
         const eyeBrowToggle = this.utils.getEyeBrowToggle();
         
-        const leftHandVisible = newHandednessJson["Left"] !== null;
-        const rightHandVisible = newHandednessJson["Right"] !== null;
+        const leftHandVisible = newHandednessJson[this.leftHandString] !== null;
+        const rightHandVisible = newHandednessJson[this.rightHandString] !== null;
+
+        // TODO: Come up with a better way to do this. This is just a quick solution to make learning progress.
+        // From the documentation I had assumed the index value ive stored in the newHandedJson would match, but it doesnt if right hand is missing. 
+        // const leftHandLandmarksLocation = rightHandVisible ? newHandednessJson[this.leftHandString] : 0; 
     
         this.updateControlText(leftHandVisible, rightHandVisible);
         if (leftHandVisible) {
-            const leftHand = detections.landmarks[newHandednessJson["Left"]];
+            const leftHand = detections.landmarks[newHandednessJson[this.leftHandString]];
             const leftHandIndexTip = leftHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
             const leftTouch = this.utils.fingerTipXYAreClose(leftDotCords, leftHandIndexTip, 5);
             if(leftTouch != this.prevLeftTouch) {
@@ -70,10 +76,9 @@ class HandController {
         }
     
         if (rightHandVisible) {
-            const rightHand = detections.landmarks[newHandednessJson["Right"]];
+            const rightHand = detections.landmarks[newHandednessJson[this.rightHandString]];
             const rightHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
             const rightTouch = this.utils.fingerTipXYAreClose(rightDotCords, rightHandIndexTip, 5);
-            console.log(`rightTouch`, rightTouch);
             if(rightTouch != this.prevRightTouch) {
                 this.prevRightTouch = rightTouch;
                 if(rightTouch) {
@@ -87,12 +92,12 @@ class HandController {
         const jawToggle = this.utils.getJawToggle();
         const eyeBrowToggle = this.utils.getEyeBrowToggle();
         
-        const leftHandVisible = newHandednessJson["Left"] !== null;
-        const rightHandVisible = newHandednessJson["Right"] !== null;
+        const leftHandVisible = newHandednessJson[this.leftHandString] !== null;
+        const rightHandVisible = newHandednessJson[this.rightHandString] !== null;
     
         this.updateControlText(leftHandVisible, rightHandVisible);
         if (leftHandVisible) {
-            const leftHand = detections.landmarks[newHandednessJson["Left"]];
+            const leftHand = detections.landmarks[newHandednessJson[this.leftHandString]];
             const leftHandThumbTip = leftHand[HandCoordinatesEnum.THUMB_TIP]
             const leftHandIndexTip = leftHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
             const leftTouch = this.utils.xyAreClose(leftHandThumbTip, leftHandIndexTip, 2);
@@ -106,7 +111,7 @@ class HandController {
     
     
         if (rightHandVisible) {
-            const rightHand = detections.landmarks[newHandednessJson["Right"]];
+            const rightHand = detections.landmarks[newHandednessJson[this.rightHandString]];
             const rightHandThumbTip = rightHand[HandCoordinatesEnum.THUMB_TIP];
             const rightHandIndexTip = rightHand[HandCoordinatesEnum.INDEX_FINGER_TIP];
             const rightTouch = this.utils.xyAreClose(rightHandThumbTip, rightHandIndexTip, 2);
@@ -132,7 +137,7 @@ class HandController {
         if (video.currentTime != lastVideoTime) {
             lastVideoTime = video.currentTime;
             const detections = this.handLandmarker.detectForVideo(video, startTimeMs);
-    
+
             // EDIT / Note: Because the index value from detections doesnt change for left if its the only one in view. Gonna just get it working with both hands in view for now.
             // Determine if Left, Right, Both, or None are visible through handedness
             // Set indexes of each to a variable
