@@ -127,6 +127,23 @@ const getEyeBrowToggle = (): HTMLInputElement => {
     return eyeBrowToggle;
 }
 
+const setAudioSource = (path: string, showControls: boolean): void => {
+    let audioPlayer = getAudioPlayer();
+    if (audioPlayer instanceof HTMLAudioElement) {
+        audioPlayer.src = path;
+        showControls ? audioPlayer.setAttribute('controls', '') : audioPlayer.removeAttribute("controls");
+    }
+}
+
+const setWebcamStream = async (faceEventManager, handEventManager) => {
+    const video = getVideoPlayer();
+    navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+        video.srcObject = stream;
+        video.addEventListener("loadeddata", faceEventManager);
+        video.addEventListener("loadeddata", handEventManager);
+    });
+}
+
 module.exports = {
     createBlendShapesDictionary,
     createHandednessJSONObject,
@@ -138,5 +155,7 @@ module.exports = {
     getLeftHandControlLabel,
     getRightHandControlLabel,
     getJawToggle,
-    getEyeBrowToggle
+    getEyeBrowToggle,
+    setAudioSource,
+    setWebcamStream
 }

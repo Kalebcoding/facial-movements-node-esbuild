@@ -5,7 +5,7 @@ enum SupportedFaceMovements {
     BroDownRight = 'browDownRight'
 }
 
-class FaceControlClass {
+class FaceController {
 
     private faceLandmarker;
     private utils; 
@@ -68,7 +68,7 @@ class FaceControlClass {
     }
 
 
-    public faceEventWrapper = async () => {
+    public faceEventManager = async () => {
         const video = this.utils.getVideoPlayer();
         const audioPlayer = this.utils.getAudioPlayer();
         const jawToggle = this.utils.getJawToggle();
@@ -90,8 +90,8 @@ class FaceControlClass {
     
         // We can set the response of this to an object to capture id
         // Then stop it so we dont spam the browser, but thats a different optimization. 
-        window.requestAnimationFrame(this.faceEventWrapper);
+        window.requestAnimationFrame(this.faceEventManager);
     }
 }
 
-module.exports = FaceControlClass;
+module.exports = FaceController;
