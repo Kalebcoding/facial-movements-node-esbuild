@@ -8,6 +8,8 @@ class HandController {
     private handLandmarker;
     private utils; 
     private drawingUtil;
+    private leftHandVisible = false;
+    private rightHandVisible = false;
     private prevLeftTouch = false;
     private prevRightTouch = false;
     private prevLeftPointPinch = false;
@@ -22,51 +24,33 @@ class HandController {
     }
 
     private updateControlText = (leftHandVisible: boolean, rightHandVisible: boolean) => {
-        const leftHandControlLabel = this.utils.getStatusTextLeftHand()
-        const rightHandControlLabel = this.utils.getStatusTextRightHand()
         if(leftHandVisible) {
-            leftHandControlLabel.textContent = "Enabled";
+            this.utils.setStatusTextLeftHand("Enabled");
         } else {
-            leftHandControlLabel.textContent = "Disabled";
+            this.utils.setStatusTextLeftHand("Disabled");
         }
     
         if(rightHandVisible) {
-            rightHandControlLabel.textContent = "Enabled";
+            this.utils.setStatusTextRightHand("Enabled")
         } else {
-            rightHandControlLabel.textContent = "Disabled";
+            this.utils.setStatusTextRightHand("Disabled")
         }
     }
 
-    private pointControls = async (detections, newHandednessJson) => {
+    private checkIfHandsDetected = (newHandednessJson) => {
+        this.leftHandVisible = newHandednessJson[this.leftHandString] !== null;
+        this.rightHandVisible = newHandednessJson[this.rightHandString] !== null;
+        this.updateControlText(this.leftHandVisible, this.rightHandVisible)
+    }
 
-        // TODO: Refactor this. Messy.
-        // We check if the camera is mirrored, if so the dots will be reveresed.
-        // Like could solve this in a more mature way. 
-        let rightDotCords;
-        let leftDotCords;
-        const cameraMirroed = true;
-        if(cameraMirroed){
-            rightDotCords = { x: this.drawingUtil.topLeftDotX, y: this.drawingUtil.topLeftDotY, z: 0 }
-            leftDotCords = { x: this.drawingUtil.topRightDotX, y: this.drawingUtil.topRightDotY, z: 0 }
-        } else {
-            leftDotCords = { x: this.drawingUtil.topLeftDotX, y: this.drawingUtil.topLeftDotY, z: 0 }
-            rightDotCords = { x: this.drawingUtil.topRightDotX, y: this.drawingUtil.topRightDotY, z: 0 }
-        }
+    private pointControls = async (detections, newHandednessJson) => {
         const jawToggle = this.utils.getJawCheckbox();
         const eyeBrowToggle = this.utils.getEyeBrowCheckbox();
-        
-        const leftHandVisible = newHandednessJson[this.leftHandString] !== null;
-        const rightHandVisible = newHandednessJson[this.rightHandString] !== null;
 
-        // TODO: Come up with a better way to do this. This is just a quick solution to make learning progress.
-        // From the documentation I had assumed the index value ive stored in the newHandedJson would match, but it doesnt if right hand is missing. 
-        // const leftHandLandmarksLocation = rightHandVisible ? newHandednessJson[this.leftHandString] : 0; 
-    
-        this.updateControlText(leftHandVisible, rightHandVisible);
-        if (leftHandVisible) {
+        if (this.leftHandVisible) {
             const leftHand = detections.landmarks[newHandednessJson[this.leftHandString]];
             const leftHandIndexTip = leftHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
-            const leftTouch = this.utils.canvasAndLandMarkClose(leftDotCords, leftHandIndexTip, this.drawingUtil.maxX, this.drawingUtil.maxY, 5);
+            const leftTouch = this.utils.canvasAndLandMarkClose(this.drawingUtil.leftDotCoords, leftHandIndexTip, this.drawingUtil.maxX, this.drawingUtil.maxY, 10);
             if((leftTouch != this.prevLeftTouch) && !this.prevLeftPointPinch) {
                 this.prevLeftTouch = leftTouch;
                 if(leftTouch) {
@@ -75,10 +59,10 @@ class HandController {
             }
         }
     
-        if (rightHandVisible) {
+        if (this.rightHandVisible) {
             const rightHand = detections.landmarks[newHandednessJson[this.rightHandString]];
             const rightHandIndexTip = rightHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
-            const rightTouch = this.utils.canvasAndLandMarkClose(rightDotCords, rightHandIndexTip, this.drawingUtil.maxX, this.drawingUtil.maxY, 5);
+            const rightTouch = this.utils.canvasAndLandMarkClose(this.drawingUtil.rightDotCoords, rightHandIndexTip, this.drawingUtil.maxX, this.drawingUtil.maxY, 10);
             if((rightTouch != this.prevRightTouch) && !this.prevRightPointPinch) {
                 this.prevRightTouch = rightTouch;
                 if(rightTouch) {
@@ -89,29 +73,12 @@ class HandController {
     }
 
     private pinchControls = async (detections, newHandednessJson) => {
-        let rightDotCords;
-        let leftDotCords;
-        const cameraMirroed = true;
-        if(cameraMirroed){
-            rightDotCords = { x: this.drawingUtil.topLeftDotX, y: this.drawingUtil.topLeftDotY, z: 0 }
-            leftDotCords = { x: this.drawingUtil.topRightDotX, y: this.drawingUtil.topRightDotY, z: 0 }
-        } else {
-            leftDotCords = { x: this.drawingUtil.topLeftDotX, y: this.drawingUtil.topLeftDotY, z: 0 }
-            rightDotCords = { x: this.drawingUtil.topRightDotX, y: this.drawingUtil.topRightDotY, z: 0 }
-        }
-
-        const jawToggle = this.utils.getJawCheckbox();
-        const eyeBrowToggle = this.utils.getEyeBrowCheckbox();
-        
-        const leftHandVisible = newHandednessJson[this.leftHandString] !== null;
-        const rightHandVisible = newHandednessJson[this.rightHandString] !== null;
     
-        this.updateControlText(leftHandVisible, rightHandVisible);
-        if (leftHandVisible){
+        if (this.leftHandVisible){
             const leftHand = detections.landmarks[newHandednessJson[this.leftHandString]];
             const leftHandThumbTip = leftHand[SupportedHandLandmarkers.THUMB_TIP]
             const leftHandIndexTip = leftHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
-            const leftPointIsPinched = this.utils.landMarkerIntersectionAndCanvasPoint(leftHandThumbTip, leftHandIndexTip, leftDotCords, this.drawingUtil.maxX, this.drawingUtil.maxY, 2, 10)
+            const leftPointIsPinched = this.utils.landMarkerIntersectionAndCanvasPoint(leftHandThumbTip, leftHandIndexTip, this.drawingUtil.leftDotCoords, this.drawingUtil.maxX, this.drawingUtil.maxY, 2, 10)
             if (leftPointIsPinched != this.prevLeftPointPinch) {
                 this.prevLeftPointPinch = leftPointIsPinched;
                 const leftHandPinchLabel = this.utils.getStatusTextFunLeftPinch();
@@ -123,12 +90,11 @@ class HandController {
             }
         }
 
-        if (rightHandVisible){
+        if (this.rightHandVisible){
             const rightHand = detections.landmarks[newHandednessJson[this.rightHandString]];
             const rightHandThumbTip = rightHand[SupportedHandLandmarkers.THUMB_TIP];
             const rightHandIndexTip = rightHand[SupportedHandLandmarkers.INDEX_FINGER_TIP];
-            const rightPointIsPinched = this.utils.landMarkerIntersectionAndCanvasPoint(rightHandThumbTip, rightHandIndexTip, rightDotCords, this.drawingUtil.maxX, this.drawingUtil.maxY, 2, 10)
-            console.log(`rightPointIsPinched`, rightPointIsPinched);
+            const rightPointIsPinched = this.utils.landMarkerIntersectionAndCanvasPoint(rightHandThumbTip, rightHandIndexTip, this.drawingUtil.rightDotCoords, this.drawingUtil.maxX, this.drawingUtil.maxY, 2, 10)
             if (rightPointIsPinched != this.prevRightPointPinch) {
                 this.prevRightPointPinch = rightPointIsPinched;
                 const rightHandPinchLabel = this.utils.getStatusTextFunRightPinch();
@@ -154,14 +120,10 @@ class HandController {
         if (video.currentTime != lastVideoTime) {
             lastVideoTime = video.currentTime;
             const detections = this.handLandmarker.detectForVideo(video, startTimeMs);
-
-            // EDIT / Note: Because the index value from detections doesnt change for left if its the only one in view. Gonna just get it working with both hands in view for now.
-            // Determine if Left, Right, Both, or None are visible through handedness
-            // Set indexes of each to a variable
             newHandednessJson = this.utils.buildHandednessDictonary(detections.handedness)
-            // Create a Dictonary of all coordinates -- ENUM HandCoordinatesEnum
+            this.checkIfHandsDetected(newHandednessJson);
+
     
-            // Compare touch for interactions (x, y, z)
             this.pointControls(detections, newHandednessJson);
             this.pinchControls(detections, newHandednessJson); 
     

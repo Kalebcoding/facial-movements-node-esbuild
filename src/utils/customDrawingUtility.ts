@@ -2,12 +2,15 @@ class CustomDrawingUtility {
 
     private canvasElement;
     private video;
+    private webcamMirrored = true;
+    public rightDotCoords: JSONCoordinates | {} = {};
+    public leftDotCoords: JSONCoordinates |  {} = {};
     public topLeftDotX;
     public topLeftDotY;
     public topRightDotX;
     public topRightDotY;
     public maxX;
-    public maxY
+    public maxY;
 
     constructor(utils) {
         this.canvasElement = utils.getVideoCanvasOutput()
@@ -15,6 +18,16 @@ class CustomDrawingUtility {
         utils.getButtonInitCanvas().onclick = this.mutateCanvasAndVideoSize;
         utils.getButtonDrawCanvas().onclick = this.drawDots;
         utils.getButtonClearCanvas().onclick = this.clearCanvas;
+    }
+
+    private setDotCoords = (): void => {
+        if(this.webcamMirrored){
+            this.rightDotCoords = { x: this.topLeftDotX, y: this.topLeftDotY, z: 0 }
+            this.leftDotCoords = { x: this.topRightDotX, y: this.topRightDotY, z: 0 }
+        } else {
+            this.leftDotCoords = { x: this.topLeftDotX, y: this.topLeftDotY, z: 0 }
+            this.rightDotCoords  = { x: this.topRightDotX, y: this.topRightDotY, z: 0 }
+        }
     }
 
     public mutateCanvasAndVideoSize = () => {
@@ -43,6 +56,8 @@ class CustomDrawingUtility {
         this.topRightDotX = this.maxX - 40;
         this.topRightDotY = 35;
         ctx.fillRect(this.topRightDotX, this.topRightDotY, 10, 10);
+
+        this.setDotCoords();
     }
 
     public clearCanvas = () => {

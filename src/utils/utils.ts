@@ -35,6 +35,8 @@ enum HTMLElementIds {
     STATUS_TEXT_FUN_RIGHT_PINCH = 'status-text-fun-right-pinch'
 }
 
+
+
 /**
  * Used to detect how close two numbers are and if they are within the given tolerance range
  * @param num1 First number
@@ -201,12 +203,12 @@ const getEyeBrowCheckbox = (): HTMLInputElement => {
     return getHTMLElement<HTMLInputElement>(HTMLElementIds.CHECKBOX_EYE_BROW);
 }
 
-const getStatusTextLeftHand = (): HTMLSpanElement => {
-    return getHTMLElement<HTMLSpanElement>(HTMLElementIds.STATUS_TEXT_LEFT_HAND);
+const setStatusTextLeftHand = (newText: string): void => {
+    getHTMLElement<HTMLSpanElement>(HTMLElementIds.STATUS_TEXT_LEFT_HAND).textContent = newText;
 }
 
-const getStatusTextRightHand = (): HTMLSpanElement => {
-    return getHTMLElement<HTMLSpanElement>(HTMLElementIds.STATUS_TEXT_RIGHT_HAND);
+const setStatusTextRightHand = (newText: string): void => {
+    getHTMLElement<HTMLSpanElement>(HTMLElementIds.STATUS_TEXT_RIGHT_HAND).textContent = newText;
 }
 
 const getStatusTextFunLeftPinch = (): HTMLSpanElement => {
@@ -259,8 +261,8 @@ module.exports = {
     getAudioPlayer,
     getJawCheckbox,
     getEyeBrowCheckbox,
-    getStatusTextLeftHand,
-    getStatusTextRightHand,
+    setStatusTextLeftHand,
+    setStatusTextRightHand,
     getStatusTextFunLeftPinch,
     getStatusTextFunRightPinch,
     getButtonInitCanvas,
