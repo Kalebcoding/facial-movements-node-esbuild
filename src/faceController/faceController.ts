@@ -80,7 +80,6 @@ class FaceController {
         if (video.currentTime != lastVideoTime) {
             lastVideoTime = video.currentTime;
             const detections = this.faceLandmarker.detectForVideo(video, startTimeMs);
-            // TODO: Can improve this function
             blendShapesDictionary = this.utils.buildFaceBlendShapesDictonary(detections.faceBlendshapes, blendShapesDictionary);
             jawToggle.checked && this.jawMusicControl(detections, blendShapesDictionary, audioPlayer);
             eyeBrowToggle.checked && this.eyeBrowControl(detections, blendShapesDictionary, audioPlayer);
