@@ -10,11 +10,11 @@ class CustomDrawingUtility {
     public maxY
 
     constructor(utils) {
-        this.canvasElement = utils.getVideoCanvas()
+        this.canvasElement = utils.getVideoCanvasOutput()
         this.video = utils.getVideoPlayer();
-        utils.getDrawOnCanvasButton().onclick = this.drawDots;
-        utils.getClearCanvasButton().onclick = this.clearCanvas;
-        utils.getInitCanvasButton().onclick = this.mutateCanvasAndVideoSize;
+        utils.getButtonInitCanvas().onclick = this.mutateCanvasAndVideoSize;
+        utils.getButtonDrawCanvas().onclick = this.drawDots;
+        utils.getButtonClearCanvas().onclick = this.clearCanvas;
     }
 
     public mutateCanvasAndVideoSize = () => {

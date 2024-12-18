@@ -22,8 +22,8 @@ class HandController {
     }
 
     private updateControlText = (leftHandVisible: boolean, rightHandVisible: boolean) => {
-        const leftHandControlLabel = this.utils.getLeftHandControlLabel()
-        const rightHandControlLabel = this.utils.getRightHandControlLabel()
+        const leftHandControlLabel = this.utils.getStatusTextLeftHand()
+        const rightHandControlLabel = this.utils.getStatusTextRightHand()
         if(leftHandVisible) {
             leftHandControlLabel.textContent = "Enabled";
         } else {
@@ -52,8 +52,8 @@ class HandController {
             leftDotCords = { x: this.drawingUtil.topLeftDotX, y: this.drawingUtil.topLeftDotY, z: 0 }
             rightDotCords = { x: this.drawingUtil.topRightDotX, y: this.drawingUtil.topRightDotY, z: 0 }
         }
-        const jawToggle = this.utils.getJawToggle();
-        const eyeBrowToggle = this.utils.getEyeBrowToggle();
+        const jawToggle = this.utils.getJawCheckbox();
+        const eyeBrowToggle = this.utils.getEyeBrowCheckbox();
         
         const leftHandVisible = newHandednessJson[this.leftHandString] !== null;
         const rightHandVisible = newHandednessJson[this.rightHandString] !== null;
@@ -100,8 +100,8 @@ class HandController {
             rightDotCords = { x: this.drawingUtil.topRightDotX, y: this.drawingUtil.topRightDotY, z: 0 }
         }
 
-        const jawToggle = this.utils.getJawToggle();
-        const eyeBrowToggle = this.utils.getEyeBrowToggle();
+        const jawToggle = this.utils.getJawCheckbox();
+        const eyeBrowToggle = this.utils.getEyeBrowCheckbox();
         
         const leftHandVisible = newHandednessJson[this.leftHandString] !== null;
         const rightHandVisible = newHandednessJson[this.rightHandString] !== null;
@@ -114,7 +114,7 @@ class HandController {
             const leftPointIsPinched = this.utils.landMarkerIntersectionAndCanvasPoint(leftHandThumbTip, leftHandIndexTip, leftDotCords, this.drawingUtil.maxX, this.drawingUtil.maxY, 2, 10)
             if (leftPointIsPinched != this.prevLeftPointPinch) {
                 this.prevLeftPointPinch = leftPointIsPinched;
-                const leftHandPinchLabel = this.utils.getLeftHandPinchLabel();
+                const leftHandPinchLabel = this.utils.getStatusTextFunLeftPinch();
                 if(leftPointIsPinched) {
                     leftHandPinchLabel.textContent = 'OUCH!';
                 } else {
@@ -131,7 +131,7 @@ class HandController {
             console.log(`rightPointIsPinched`, rightPointIsPinched);
             if (rightPointIsPinched != this.prevRightPointPinch) {
                 this.prevRightPointPinch = rightPointIsPinched;
-                const rightHandPinchLabel = this.utils.getRightHandPinchLabel();
+                const rightHandPinchLabel = this.utils.getStatusTextFunRightPinch();
                 if(rightPointIsPinched) {
                     rightHandPinchLabel.textContent = 'OUCH!';
                 } else {

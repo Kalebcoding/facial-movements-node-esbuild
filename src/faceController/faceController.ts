@@ -71,8 +71,8 @@ class FaceController {
     public faceEventManager = async () => {
         const video = this.utils.getVideoPlayer();
         const audioPlayer = this.utils.getAudioPlayer();
-        const jawToggle = this.utils.getJawToggle();
-        const eyeBrowToggle = this.utils.getEyeBrowToggle();
+        const jawToggle = this.utils.getJawCheckbox();
+        const eyeBrowToggle = this.utils.getEyeBrowCheckbox();
     
         let blendShapesDictionary: Record<string, number> = {};
         let lastVideoTime: Number = -1;
