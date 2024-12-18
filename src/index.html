@@ -7,32 +7,32 @@
   </head>
   <body>
     <div style="position: relative">
-        <video id="webcam" autoplay></video>
-        <canvas class="output_canvas" id="output_canvas" style="position: absolute; left: 0px; top: 0px;"></canvas>
+        <video id="video-webcam" autoplay></video>
+        <canvas class="canvas-output" id="canvas-output" style="position: absolute; left: 0px; top: 0px;"></canvas>
     </div>
     <div>
-        <audio id="face-audio">
+        <audio id="audio-music">
             <source src="" type="audio/mpeg">
         </audio>
     </div>
     <div>
-      <input type="checkbox" id="jaw-toggle" checked>
+      <input type="checkbox" id="checkbox-jaw" checked>
       <label for="my-toggle">Jaw Control</label>
-      <input type="checkbox" id="eye-brow-toggle">
+      <input type="checkbox" id="checkbox-eye-brow">
       <label for="my-toggle">Eye brow Control</label>
     </div>
     <div>
-      <h2> Left Hand Control Status: <span id="left-hand-control-status"> Disabled </span></h2>
-      <h2> Right Hand Control Status: <span id="right-hand-control-status"> Disabled </span></h2>
+      <h2> Left Hand Control Status: <span id="status-text-left-hand"> Disabled </span></h2>
+      <h2> Right Hand Control Status: <span id="status-text-right-hand"> Disabled </span></h2>
     </div>
     <div>
-      <button id="init-canvas"> Init Canvas </button>
-      <button id="draw-canvas"> Draw on Canvas </button>
-      <button id="clear-canvas"> Clear Canvas</button>
+      <button id="button-init-canvas"> Init Canvas </button>
+      <button id="button-draw-canvas"> Draw on Canvas </button>
+      <button id="button-clear-canvas"> Clear Canvas</button>
     </div>
     <div>
-      <h2> Left Pinch: <span id="left-hand-pinch-status"> Waiting... </span></h2>
-      <h2> Right Pinch: <span id="right-hand-pinch-status"> Waiting... </span></h2>
+      <h2> Left Pinch: <span id="status-text-fun-left-pinch"> Waiting... </span></h2>
+      <h2> Right Pinch: <span id="status-text-fun-right-pinch"> Waiting... </span></h2>
     </div>
     <script src="./bundle.js"></script>
   </body>

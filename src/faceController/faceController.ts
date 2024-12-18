@@ -71,8 +71,8 @@ class FaceController {
     public faceEventManager = async () => {
         const video = this.utils.getVideoPlayer();
         const audioPlayer = this.utils.getAudioPlayer();
-        const jawToggle = this.utils.getJawToggle();
-        const eyeBrowToggle = this.utils.getEyeBrowToggle();
+        const jawToggle = this.utils.getJawCheckbox();
+        const eyeBrowToggle = this.utils.getEyeBrowCheckbox();
     
         let blendShapesDictionary: Record<string, number> = {};
         let lastVideoTime: Number = -1;
@@ -80,7 +80,6 @@ class FaceController {
         if (video.currentTime != lastVideoTime) {
             lastVideoTime = video.currentTime;
             const detections = this.faceLandmarker.detectForVideo(video, startTimeMs);
-            // TODO: Can improve this function
             blendShapesDictionary = this.utils.buildFaceBlendShapesDictonary(detections.faceBlendshapes, blendShapesDictionary);
             jawToggle.checked && this.jawMusicControl(detections, blendShapesDictionary, audioPlayer);
             eyeBrowToggle.checked && this.eyeBrowControl(detections, blendShapesDictionary, audioPlayer);

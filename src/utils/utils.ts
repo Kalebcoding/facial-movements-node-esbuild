@@ -20,20 +20,58 @@ type JSONCoordinates = {
     z: number
 }
 
+enum HTMLElementIds {
+    VIDEO_WEBCAM = 'video-webcam',
+    AUDIO_MUSIC = 'audio-music',
+    CANVAS_OUTPUT = 'canvas-output',
+    CHECKBOX_JAW = 'checkbox-jaw',
+    CHECKBOX_EYE_BROW = 'checkbox-eye-brow',
+    STATUS_TEXT_LEFT_HAND = 'status-text-left-hand',
+    STATUS_TEXT_RIGHT_HAND = 'status-text-right-hand',
+    BUTTON_INIT_CANVAS = 'button-init-canvas',
+    BUTTON_DRAW_CANVAS = 'button-draw-canvas',
+    BUTTON_CLEAR_CANVAS = 'button-clear-canvas',
+    STATUS_TEXT_FUN_LEFT_PINCH = 'status-text-fun-left-pinch',
+    STATUS_TEXT_FUN_RIGHT_PINCH = 'status-text-fun-right-pinch'
+}
+
+
+
 /**
- * I didnt see anything in their documentation about accessing this value easier. I didnt really want to hardcode it 
- * @param jsonArray - This should map out the categories and their indexes 
+ * Used to detect how close two numbers are and if they are within the given tolerance range
+ * @param num1 First number
+ * @param num2 Second Number
+ * @param tolerance Amount of variation to be considered close enough
  * @returns 
  */
-const createBlendShapesDictionary = (jsonArray: BlendShapesCategories[]): Record<string, number> => {
-    let dictionary: Record<string, number> = {};
-
-    for (const item of jsonArray) {
-        dictionary[item.categoryName] = item.index;
-    }
-
-    return dictionary;
+const coordsAreClose = (num1: number, num2: number, tolerance: number, num1Multipler: number = 1, number2Multiplier: number = 1) => {
+    return Math.abs((num1 * num1Multipler) - (num2 * number2Multiplier)) < tolerance;
 }
+
+const averageJsonValues = (json1: JSONCoordinates, json2: JSONCoordinates): JSONCoordinates => {
+    const averagedJson: JSONCoordinates = {
+        x: -1,
+        y: -1,
+        z: -1,
+    };
+    for (const key in json1) {
+        if(key in json2) {
+            averagedJson[key] = (json1[key] + json2[key]) / 2;
+        }
+    }
+    return averagedJson;
+}
+
+
+/**
+ * Function get an HTML element
+ */
+const getHTMLElement = <T extends HTMLElement>(elementId: string): T => {
+    const htmlElement: T = document.getElementById(elementId) as T;
+    return htmlElement;
+}
+
+
 
 const createHandednessJSONObject = (jsonArray: NestedMediaPipeHandednessType): {} => {
     let newJson: {} = {};
@@ -68,32 +106,54 @@ const createHandednessJSONObject = (jsonArray: NestedMediaPipeHandednessType): {
     }
     return newJson;
 }
-    
+
 /**
- * Used to detect how close two numbers are and if they are within the given tolerance range
- * @param num1 First number
- * @param num2 Second Number
- * @param tolerance Amount of variation to be considered close enough
+ * Create a dictonary to use that has all the category names as the key and the index they are as the value
+ * @param faceBlendshapes 
  * @returns 
  */
-const coordsAreClose = (num1: number, num2: number, tolerance: number, num1Multipler: number = 1, number2Multiplier: number = 1) => {
-    return Math.abs((num1 * num1Multipler) - (num2 * number2Multiplier)) < tolerance;
-}
+const buildHandednessDictonary = (handedness: NestedMediaPipeHandednessType): {} => {
+    // TODO: Fix this logic. It is going to rebuild this dictonary EVERY time it detects hands. Thats bad. 
+    // It needs more complex logic than the categories one did, or it needs a better data structure
+    // This is because the array can be length of 1 but that could change from Left to Right
+    // Rebuilding everytime as a workaround for now.
 
-const averageJsonValues = (json1: JSONCoordinates, json2: JSONCoordinates): JSONCoordinates => {
-    const averagedJson: JSONCoordinates = {
-        x: -1,
-        y: -1,
-        z: -1,
-    };
-    for (const key in json1) {
-        if(key in json2) {
-            averagedJson[key] = (json1[key] + json2[key]) / 2;
-        }
+    let newHandednessJson = createHandednessJSONObject(handedness);
+    return newHandednessJson;
+};
+
+/**
+ * I didnt see anything in their documentation about accessing this value easier. I didnt really want to hardcode it 
+ * @param jsonArray - This should map out the categories and their indexes 
+ * @returns 
+ */
+const createBlendShapesDictionary = (jsonArray: BlendShapesCategories[]): Record<string, number> => {
+    let dictionary: Record<string, number> = {};
+
+    for (const item of jsonArray) {
+        dictionary[item.categoryName] = item.index;
     }
-    return averagedJson;
+
+    return dictionary;
 }
 
+/**
+ * Create a dictonary to use that has all the category names as the key and the index they are as the value
+ * @param faceBlendshapes 
+ * @returns 
+ */
+const buildFaceBlendShapesDictonary = (faceBlendshapes, blendShapesDictionary): Record<string, number> => {
+    if (!faceBlendshapes.length) {
+        return;
+    }
+
+    if (Object.keys(blendShapesDictionary).length === 0) {
+        return blendShapesDictionary = createBlendShapesDictionary(faceBlendshapes[0].categories);
+    }
+
+    return blendShapesDictionary;
+};
+    
 // Used to determine IF landmarker values are touching
 const landmarkersAreClose = (landmarkerJson1: JSONCoordinates, landmarkerJson2: JSONCoordinates, tolerance: number) => {
     const landmarkerMultipler = 100;
@@ -122,96 +182,53 @@ const landMarkerIntersectionAndCanvasPoint = (landmarkerJson1: JSONCoordinates, 
     }
 }
 
-/**
- * Create a dictonary to use that has all the category names as the key and the index they are as the value
- * @param faceBlendshapes 
- * @returns 
- */
-const buildFaceBlendShapesDictonary = (faceBlendshapes, blendShapesDictionary): Record<string, number> => {
-    if (!faceBlendshapes.length) {
-        return;
-    }
-
-    if (Object.keys(blendShapesDictionary).length === 0) {
-        return blendShapesDictionary = createBlendShapesDictionary(faceBlendshapes[0].categories);
-    }
-
-    return blendShapesDictionary;
-};
-
-/**
- * Create a dictonary to use that has all the category names as the key and the index they are as the value
- * @param faceBlendshapes 
- * @returns 
- */
-const buildHandednessDictonary = (handedness: NestedMediaPipeHandednessType): {} => {
-    // TODO: Fix this logic. It is going to rebuild this dictonary EVERY time it detects hands. Thats bad. 
-    // It needs more complex logic than the categories one did, or it needs a better data structure
-    // This is because the array can be length of 1 but that could change from Left to Right
-    // Rebuilding everytime as a workaround for now.
-
-    let newHandednessJson = createHandednessJSONObject(handedness);
-    return newHandednessJson;
-};
-
-const getAudioPlayer = (): HTMLAudioElement => {
-    const audioPlayer: HTMLAudioElement = document.getElementById('face-audio') as HTMLAudioElement;
-    return audioPlayer
-}
 
 const getVideoPlayer = (): HTMLVideoElement => {
-    const video: HTMLVideoElement = document.getElementById('webcam') as HTMLVideoElement;
-    return video;
+    return getHTMLElement<HTMLVideoElement>(HTMLElementIds.VIDEO_WEBCAM);
 }
 
-const getLeftHandControlLabel = (): HTMLSpanElement => {
-    const leftHandControlLabel = document.getElementById("left-hand-control-status") as HTMLSpanElement;
-    return leftHandControlLabel;
+const getVideoCanvasOutput = (): HTMLCanvasElement => {
+    return getHTMLElement<HTMLCanvasElement>(HTMLElementIds.CANVAS_OUTPUT);
 }
 
-const getRightHandControlLabel = (): HTMLSpanElement => {
-    const rightHandControlLabel = document.getElementById("right-hand-control-status") as HTMLSpanElement;
-    return rightHandControlLabel;
+const getAudioPlayer = (): HTMLAudioElement => {
+    return getHTMLElement<HTMLAudioElement>(HTMLElementIds.AUDIO_MUSIC); 
 }
 
-const getLeftHandPinchLabel = (): HTMLSpanElement => {
-    const leftHandPinchLabel = document.getElementById("left-hand-pinch-status") as HTMLSpanElement;
-    return leftHandPinchLabel;
+const getJawCheckbox = (): HTMLInputElement => {
+    return getHTMLElement<HTMLInputElement>(HTMLElementIds.CHECKBOX_JAW);
 }
 
-const getRightHandPinchLabel = (): HTMLSpanElement => {
-    const rightHandPinchLabel = document.getElementById("right-hand-pinch-status") as HTMLSpanElement;
-    return rightHandPinchLabel;
+const getEyeBrowCheckbox = (): HTMLInputElement => {
+    return getHTMLElement<HTMLInputElement>(HTMLElementIds.CHECKBOX_EYE_BROW);
 }
 
-const getJawToggle = (): HTMLInputElement => {
-    const jawToggle: HTMLInputElement = document.getElementById('jaw-toggle') as HTMLInputElement;
-    return jawToggle;
+const setStatusTextLeftHand = (newText: string): void => {
+    getHTMLElement<HTMLSpanElement>(HTMLElementIds.STATUS_TEXT_LEFT_HAND).textContent = newText;
 }
 
-const getEyeBrowToggle = (): HTMLInputElement => {
-    const eyeBrowToggle: HTMLInputElement = document.getElementById('eye-brow-toggle') as HTMLInputElement;
-    return eyeBrowToggle;
+const setStatusTextRightHand = (newText: string): void => {
+    getHTMLElement<HTMLSpanElement>(HTMLElementIds.STATUS_TEXT_RIGHT_HAND).textContent = newText;
 }
 
-const getVideoCanvas = (): HTMLCanvasElement => {
-    const canvasElement: HTMLCanvasElement = document.getElementById('output_canvas') as HTMLCanvasElement;
-    return canvasElement;
+const getStatusTextFunLeftPinch = (): HTMLSpanElement => {
+    return getHTMLElement<HTMLSpanElement>(HTMLElementIds.STATUS_TEXT_FUN_LEFT_PINCH);
 }
 
-const getDrawOnCanvasButton = (): HTMLButtonElement => {
-    const button: HTMLButtonElement = document.getElementById('draw-canvas') as HTMLButtonElement;
-    return button;
+const getStatusTextFunRightPinch = (): HTMLSpanElement => {
+    return getHTMLElement<HTMLSpanElement>(HTMLElementIds.STATUS_TEXT_FUN_RIGHT_PINCH);
 }
 
-const getInitCanvasButton = (): HTMLButtonElement => {
-    const button: HTMLButtonElement = document.getElementById('init-canvas') as HTMLButtonElement;
-    return button;
+const getButtonInitCanvas = (): HTMLButtonElement => {
+    return getHTMLElement<HTMLButtonElement>(HTMLElementIds.BUTTON_INIT_CANVAS);
 }
 
-const getClearCanvasButton = (): HTMLButtonElement => {
-    const button: HTMLButtonElement = document.getElementById('clear-canvas') as HTMLButtonElement;
-    return button;
+const getButtonDrawCanvas = (): HTMLButtonElement => {
+    return getHTMLElement<HTMLButtonElement>(HTMLElementIds.BUTTON_DRAW_CANVAS);
+}
+
+const getButtonClearCanvas = (): HTMLButtonElement => {
+    return getHTMLElement<HTMLButtonElement>(HTMLElementIds.BUTTON_CLEAR_CANVAS);
 }
 
 const setAudioSource = (path: string, showControls: boolean): void => {
@@ -232,25 +249,25 @@ const setWebcamStream = async (faceEventManager, handEventManager) => {
 }
 
 module.exports = {
-    createBlendShapesDictionary,
     createHandednessJSONObject,
+    buildHandednessDictonary,
+    createBlendShapesDictionary,
+    buildFaceBlendShapesDictonary,
     landmarkersAreClose,
     canvasAndLandMarkClose,
     landMarkerIntersectionAndCanvasPoint,
-    buildFaceBlendShapesDictonary,
-    buildHandednessDictonary,
-    getAudioPlayer,
     getVideoPlayer,
-    getLeftHandControlLabel,
-    getRightHandControlLabel,
-    getLeftHandPinchLabel,
-    getRightHandPinchLabel,
-    getJawToggle,
-    getEyeBrowToggle,
-    getDrawOnCanvasButton,
-    getClearCanvasButton,
-    getInitCanvasButton,
-    getVideoCanvas,
+    getVideoCanvasOutput,
+    getAudioPlayer,
+    getJawCheckbox,
+    getEyeBrowCheckbox,
+    setStatusTextLeftHand,
+    setStatusTextRightHand,
+    getStatusTextFunLeftPinch,
+    getStatusTextFunRightPinch,
+    getButtonInitCanvas,
+    getButtonDrawCanvas,
+    getButtonClearCanvas,
     setAudioSource,
     setWebcamStream
 }
